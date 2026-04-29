@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-dark: #060E1E;
+  --color-primary-mid: #0056B3;
+  --color-primary-light: #0084FF;
+  --color-primary-cyan: #00D1FF;
+  --color-brand-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  
+  --background: var(--bg-main);
+  --foreground: var(--text-main);
+  
+  --color-glass: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  --color-glass-hover: var(--glass-hover);
+  --shadow-glass: var(--glass-shadow);
+
+  @keyframes shine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+}
+
+:root {
+  --bg-main: #F1F5F9;
+  --text-main: #0F172A;
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(0, 132, 255, 0.15);
+  --glass-hover: rgba(0, 132, 255, 0.05);
+  --glass-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.08), 0 5px 15px -5px rgba(0, 0, 0, 0.04);
+  --radial-opacity: 0.04;
+  --logo-url: url('/logo-dark.png');
+}
+
+.dark {
+  --bg-main: #060E1E;
+  --text-main: #FFFFFF;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-hover: rgba(255, 255, 255, 0.06);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  --radial-opacity: 0.1;
+  --logo-url: url('/logo-horizontal.png');
+}
+
+/* Otimização Agressiva de Transição de Tema */
+.theme-transitioning,
+.theme-transitioning * {
+  transition: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+/* Estabilização de Renderização de Texto */
+.label-caps, .title-italic, h1, h2, h3 {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform: translateZ(0); /* Força camada de GPU */
+  backface-visibility: hidden;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), sans-serif;
+  min-height: 100vh;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  background-attachment: fixed;
+  background-image: 
+    radial-gradient(circle at 10% 10%, rgba(0, 132, 255, var(--radial-opacity)) 0%, transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(0, 209, 255, var(--radial-opacity)) 0%, transparent 40%);
+}
+
+@layer components {
+  .dynamic-logo {
+    width: 100%;
+    height: 48px;
+    background-image: var(--logo-url);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: left center;
+    transition: background-image 0.3s ease;
+  }
+
+  .label-caps {
+    @apply text-[10px] font-black italic uppercase tracking-[0.2em];
+    transition: color 0.3s ease;
+    color: color-mix(in srgb, var(--foreground), transparent 60%);
+    line-height: 1.2;
+  }
+
+  .title-italic {
+    @apply font-black italic uppercase tracking-tighter;
+    transition: color 0.3s ease;
+    color: var(--foreground);
+    line-height: 0.9;
+  }
+
+  .glass-card {
+    @apply bg-glass border border-glass-border shadow-glass rounded-[5px] p-6 flex flex-col backdrop-blur-[20px];
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .glass-button, .primary-button {
+    @apply relative overflow-hidden flex items-center justify-center font-black italic uppercase text-xs tracking-wider;
+  }
+
+  .glass-button::after, .primary-button::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    transform: skewX(-20deg);
+    pointer-events: none;
+  }
+
+  .glass-button:hover::after, .primary-button:hover::after {
+    animation: shine 1.2s infinite;
+  }
+
+  .glass-button {
+    @apply h-14 px-8 rounded-[5px] border border-glass-border bg-glass backdrop-blur-md 
+           hover:bg-glass-hover hover:border-primary-light/50 hover:brightness-110
+           active:scale-[0.97] active:brightness-90;
+    color: var(--foreground);
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.1s;
+  }
+
+  .primary-button {
+    @apply h-14 px-10 rounded-[5px] bg-primary-light text-white
+           shadow-lg shadow-primary-light/20 
+           hover:shadow-primary-light/40 hover:brightness-110
+           active:scale-[0.97] active:brightness-90 gap-2;
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.1s;
+  }
+
+  .input-field {
+    @apply h-14 w-full rounded-[5px] px-5 text-sm
+           focus:outline-none focus:border-primary-light/50 focus:shadow-[0_0_20px_rgba(0,132,255,0.08)];
+    background: color-mix(in srgb, var(--foreground), transparent 97%);
+    border: 1px solid color-mix(in srgb, var(--foreground), transparent 90%);
+    color: var(--foreground);
+    transition: all 0.2s ease;
+  }
+  
+  .input-field::placeholder {
+    color: color-mix(in srgb, var(--foreground), transparent 70%);
+  }
+
+  .badge {
+    @apply px-3 py-1.5 rounded text-[9px] font-black italic uppercase border flex items-center justify-center leading-none transition-colors duration-200;
+  }
+}
