@@ -78,7 +78,7 @@ export async function getSellersAction() {
  */
 export async function toggleSellerStatusAction(id: string, active: boolean) {
   try {
-    const { user } = await checkManager();
+    const { user, profile } = await checkManager();
     const adminSupabase = createAdminClient();
 
     // Verifica propriedade antes de agir

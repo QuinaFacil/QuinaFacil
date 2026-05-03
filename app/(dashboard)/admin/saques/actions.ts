@@ -17,6 +17,12 @@ export interface WithdrawalRequest {
   };
 }
 
+/** Shape of `withdrawals` row when selecting embedded vendedor (Supabase types wrongly infer an array). */
+type WithdrawalAuditRow = {
+  amount: number | string | null;
+  vendedor: { name: string } | null;
+};
+
 /**
  * Busca todas as solicitações de saque (Admin)
  */
@@ -82,6 +88,8 @@ export async function approveWithdrawalAction(id: string) {
       .eq('id', id)
       .single();
 
+    const row = request as WithdrawalAuditRow | null;
+
     // 2. Atualiza status
     const { error } = await supabase
       .from('withdrawals')
@@ -94,7 +102,7 @@ export async function approveWithdrawalAction(id: string) {
     await AuditService.record({
       category: 'finance',
       action: 'withdrawal_approved',
-      description: `Aprovou saque de R$ ${Number(request?.amount).toFixed(2)} para ${request?.vendedor?.name || 'Vendedor'}`
+      description: `Aprovou saque de R$ ${Number(row?.amount).toFixed(2)} para ${row?.vendedor?.name || 'Vendedor'}`
     });
 
     revalidatePath("/admin/saques");
@@ -118,6 +126,8 @@ export async function rejectWithdrawalAction(id: string) {
       .eq('id', id)
       .single();
 
+    const row = request as WithdrawalAuditRow | null;
+
     // 2. Atualiza status
     const { error } = await supabase
       .from('withdrawals')
@@ -130,7 +140,7 @@ export async function rejectWithdrawalAction(id: string) {
     await AuditService.record({
       category: 'finance',
       action: 'withdrawal_rejected',
-      description: `Rejeitou saque de R$ ${Number(request?.amount).toFixed(2)} para ${request?.vendedor?.name || 'Vendedor'}`
+      description: `Rejeitou saque de R$ ${Number(row?.amount).toFixed(2)} para ${row?.vendedor?.name || 'Vendedor'}`
     });
 
     revalidatePath("/admin/saques");
