@@ -1,6 +1,7 @@
-"use client";
-
 import React from 'react';
+import { Box } from './Box';
+import { Flex } from './Flex';
+import { Text } from "@/components/ui/Text";
 
 interface MiniChartProps {
   data: number[];
@@ -17,29 +18,27 @@ export function MiniChart({ data, label, variant = 'primary', className = "" }: 
     warning: 'bg-warning',
   };
 
-  const bgColors = {
-    primary: 'bg-primary-light/5',
-    success: 'bg-brand-success/5',
-    error: 'bg-error/5',
-    warning: 'bg-warning/5',
-  };
-
   return (
-    <div className={`glass-card gap-6 group hover:border-foreground/10 transition-all ${className}`}>
-      <p className="label-caps !text-primary-light/80">{label}</p>
-      <div className="h-24 flex items-end gap-2 w-full">
+    <Box bg="glass" padding={6} className={`group hover:border-foreground/10 transition-all ${className}`}>
+      <Text variant="sub" color="muted">{label}</Text>
+      <Flex align="end" gap={2} className="h-24 w-full">
         {data.map((h, i) => (
-          <div key={i} className={`flex-1 min-w-[8px] h-full ${bgColors[variant]} rounded-t-[3px] relative group/bar overflow-hidden`}>
-            <div 
+          <Box key={i} bg="muted" className="flex-1 min-w-[8px] h-full rounded-t-[3px] relative group/bar overflow-hidden">
+            <Box 
               style={{ height: `${h}%` }} 
-              className={`absolute bottom-0 left-0 w-full ${colors[variant]} rounded-t-[3px] transition-all duration-1000 ease-out delay-[${i * 100}ms]`} 
+              className={`absolute bottom-0 left-0 w-full ${colors[variant]} rounded-t-[3px] transition-all duration-1000 ease-out`} 
             />
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white text-primary-dark text-[7px] font-black px-1 rounded-[2px] opacity-0 group-hover/bar:opacity-100 transition-opacity z-10">
-              {h}%
-            </div>
-          </div>
+            {/* Tooltip */}
+            <Box 
+              className="absolute top-2 left-1/2 -translate-x-1/2 bg-white p-1 rounded-[2px] opacity-0 group-hover/bar:opacity-100 transition-opacity z-10"
+            >
+              <Text variant="tiny" color="primary">
+                {h}%
+              </Text>
+            </Box>
+          </Box>
         ))}
-      </div>
-    </div>
+      </Flex>
+    </Box>
   );
 }

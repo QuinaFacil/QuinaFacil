@@ -2,24 +2,26 @@
 
 import React, { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
+import { Box } from "./Box";
+import { Flex } from "./Flex";
 
 export function ThemeSwitcher() {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    
-    const initialTheme = savedTheme || systemTheme;
-    setTheme(initialTheme);
-    
-    if (initialTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    requestAnimationFrame(() => {
+      setMounted(true);
+      const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+      const initialTheme = savedTheme || 'dark';
+      setTheme(initialTheme);
+      
+      if (initialTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    });
   }, []);
 
   const toggleTheme = () => {
@@ -42,21 +44,25 @@ export function ThemeSwitcher() {
   };
 
   if (!mounted) return (
-    <div className="w-12 h-6 rounded-full bg-white/5 animate-pulse" />
+    <Box className="w-12 h-6 rounded-[5px] bg-white/5 animate-pulse" />
   );
 
   return (
-    <button
+    <Flex
+      as="button"
       onClick={toggleTheme}
-      className={`w-12 h-6 rounded-full p-1 transition-all duration-300 relative flex items-center border border-glass-border shadow-inner
+      align="center"
+      className={`w-12 h-6 rounded-[5px] p-1 transition-all duration-300 relative border border-glass-border shadow-inner cursor-pointer outline-hidden
         ${theme === 'dark' ? 'bg-primary-dark/50' : 'bg-slate-200'}`}
       title={theme === 'dark' ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
     >
       {/* Thumb/Bolinha deslizante */}
-      <div 
-        className={`w-4 h-4 rounded-full flex items-center justify-center transition-all duration-300 shadow-md transform
+      <Flex 
+        align="center"
+        justify="center"
+        className={`w-4 h-4 rounded-[5px] transition-all duration-300 shadow-md transform
           ${theme === 'dark' 
-            ? 'translate-x-6 bg-primary-light shadow-primary-light/40' 
+            ? 'translate-x-5 bg-primary-light shadow-primary-light/40' 
             : 'translate-x-0 bg-white'}`}
       >
         {theme === 'dark' ? (
@@ -64,13 +70,12 @@ export function ThemeSwitcher() {
         ) : (
           <Sun size={8} className="text-primary-mid" fill="currentColor" />
         )}
-      </div>
-
+      </Flex>
       {/* Ícones de Fundo (Imóveis) */}
-      <div className="absolute inset-0 flex justify-between items-center px-1.5 pointer-events-none opacity-20">
+      <Flex align="center" justify="between" className="absolute inset-0 px-1.5 pointer-events-none opacity-20">
         <Sun size={8} className={theme === 'light' ? 'invisible' : 'text-foreground'} />
         <Moon size={8} className={theme === 'dark' ? 'invisible' : 'text-foreground'} />
-      </div>
-    </button>
+      </Flex>
+    </Flex>
   );
 }

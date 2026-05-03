@@ -1,8 +1,16 @@
-"use client";
+"use client";;
+import React from 'react';
+import { Box } from './Box';
+import { Stack } from './Stack';
+import { Flex } from './Flex';
+import { Grid } from './Grid';
 
-import React, { useState } from 'react';
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
+import { Button } from "@/components/ui/Button";
 
 interface NumberPickerProps {
+  num?: string;
   label?: string;
   subLabel?: string;
   maxSelections?: number;
@@ -11,65 +19,80 @@ interface NumberPickerProps {
   className?: string;
 }
 
-export function NumberPicker({ 
-  label = "Seletor Quina", 
-  subLabel = "Escolha 5 dezenas para o bilhete", 
+export function NumberPicker({
+  num,
+  label = "Seletor Quina",
+  subLabel = "Escolha 5 dezenas para o bilhete",
   maxSelections = 5,
-  selectedNumbers: initialSelected = [],
+  selectedNumbers = [],
   onSelectionChange,
-  className = "" 
+  className = ""
 }: NumberPickerProps) {
-  const [selected, setSelected] = useState<number[]>(initialSelected);
-
   const toggleNumber = (n: number) => {
     let newSelected;
-    if (selected.includes(n)) {
-      newSelected = selected.filter(num => num !== n);
+    if (selectedNumbers.includes(n)) {
+      newSelected = selectedNumbers.filter(num => num !== n);
     } else {
-      if (selected.length < maxSelections) {
-        newSelected = [...selected, n].sort((a, b) => a - b);
+      if (selectedNumbers.length < maxSelections) {
+        newSelected = [...selectedNumbers, n].sort((a, b) => a - b);
       } else {
         return; // Max reached
       }
     }
-    setSelected(newSelected);
     onSelectionChange?.(newSelected);
   };
 
   return (
-    <div className={`glass-card gap-5 !p-6 ${className}`}>
-      <div className="flex flex-col gap-1">
-        <h3 className="text-xl font-black italic uppercase">{label}</h3>
-        <p className="label-caps !text-primary-light/80">{subLabel}</p>
-      </div>
-      <div className="grid grid-cols-5 md:grid-cols-10 gap-2">
-        {Array.from({ length: 80 }, (_, i) => i + 1).map((num) => {
-          const isSelected = selected.includes(num);
-          return (
-            <button
-              key={num}
+    <Box padding={4} bg="glass" border="glass" className={className}>
+      <Stack gap={5}>
+        <Stack gap={1}>
+          <Flex gap={4} align="center">
+            {num && <Text color="primary" className="italic font-black text-xl" as="span">{num}.</Text>}
+            <Heading level={3} size="xl">{label}</Heading>
+          </Flex>
+          <Text variant="tiny" className="opacity-60 uppercase italic font-black tracking-widest">{subLabel}</Text>
+        </Stack>
+
+        <Grid cols={10} gap={1}>
+          {Array.from({ length: 80 }, (_, i) => i + 1).map((num) => {
+            const isSelected = selectedNumbers.includes(num);
+            return (
+              <Button
+                key={num}
+                type="button"
+                variant={isSelected ? 'primary' : 'glass'}
+                fullWidth
+                onClick={() => toggleNumber(num)}
+                className={`h-9 p-0 rounded-[5px] text-[10px] font-black italic flex items-center justify-center transition-all
+                  ${isSelected
+                    ? 'shadow-lg shadow-primary-light/30 z-10'
+                    : 'btn-number-subtle  hover:opacity-100'}`}
+              >
+                {num.toString().padStart(2, '0')}
+              </Button>
+            );
+          })}
+        </Grid>
+
+        <Stack gap={3}>
+          <Box className="ui-divider-line" />
+          <Flex justify="between" align="center">
+            <Text
+              variant="tiny"
+              className="opacity-60 uppercase italic font-black tracking-widest"
+              as="span">Selecionados: {selectedNumbers.length}/{maxSelections}</Text>
+            <Button
               type="button"
-              onClick={() => toggleNumber(num)}
-              className={`h-10 w-full rounded-[5px] text-xs font-black italic transition-all border flex items-center justify-center
-                ${isSelected 
-                  ? 'bg-primary-light text-white border-primary-light shadow-lg shadow-primary-light/30 scale-110 z-10' 
-                  : 'bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white hover:border-white/20'}`}
+              variant="danger"
+              size="sm"
+              onClick={() => { onSelectionChange?.([]); }}
+              className="text-error"
             >
-              {num.toString().padStart(2, '0')}
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex justify-between items-center pt-2 border-t border-white/5">
-        <span className="text-[10px] font-black italic uppercase text-white/40">Selecionados: {selected.length}/{maxSelections}</span>
-        <button 
-          type="button"
-          onClick={() => { setSelected([]); onSelectionChange?.([]); }}
-          className="text-[9px] font-black italic uppercase text-error hover:underline"
-        >
-          Limpar
-        </button>
-      </div>
-    </div>
+              Limpar
+            </Button>
+          </Flex>
+        </Stack>
+      </Stack>
+    </Box>
   );
 }

@@ -1,59 +1,145 @@
 "use client";
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import { Portal } from './Portal';
+import { Box } from './Box';
+import { Stack } from './Stack';
+import { Button } from "@/components/ui/Button";
+import { Text } from "@/components/ui/Text";
+
+interface CustomOption {
+  value: string;
+  label: string;
+}
 
 interface CustomSelectProps {
-  options: string[];
+  options: (string | CustomOption)[];
   label: string;
+  value?: string;
   defaultValue?: string;
-  onSelect?: (value: string) => void;
+  onChange?: (value: string) => void;
+  onSelect?: (value: string) => void; // Para compatibilidade
   className?: string;
 }
 
-export function CustomSelect({ options, label, defaultValue, onSelect, className = "" }: CustomSelectProps) {
+export function CustomSelect({
+  options,
+  label,
+  value,
+  defaultValue,
+  onChange,
+  onSelect,
+  className = ""
+}: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState(defaultValue || options[0]);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+
+  // Normaliza opções para o formato { value, label }
+  const normalizedOptions = options.map(opt =>
+    typeof opt === 'string' ? { value: opt, label: opt } : opt
+  );
+
+  // Estado interno para quando não for controlado
+  const [internalValue, setInternalValue] = useState(defaultValue || normalizedOptions[0]?.value);
+  const selectedValue = value !== undefined ? value : internalValue;
+  const selectedOption = normalizedOptions.find(opt => opt.value === selectedValue) || normalizedOptions[0];
+
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + window.scrollY + 8,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const updatePosition = () => {
+      if (isOpen && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setCoords({
+          top: rect.bottom + window.scrollY + 8,
+          left: rect.left + window.scrollX,
+          width: rect.width
+        });
+      }
+    };
+
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isOpen]);
 
   return (
-    <div className={`flex flex-col gap-2 relative ${className}`}>
-      <label className="label-caps !text-primary-light/80 ml-1">{label}</label>
-      <button
+    <Stack gap={2} className={`relative ${className}`}>
+      <Text variant="label" color="primary" className=" uppercase italic font-black tracking-widest">{label}</Text>
+      <Button
+        ref={buttonRef}
         type="button"
+        variant="glass"
+        fullWidth
         onClick={() => setIsOpen(!isOpen)}
-        className="glass-button !h-14 !justify-between !px-5 !rounded-[5px] w-full"
+        className="!h-14 !px-5 !rounded-[5px] !justify-between group flex items-center"
       >
-        <span className="text-xs font-bold text-foreground uppercase tracking-wider">{selected}</span>
-        <ChevronDown size={18} className={`text-foreground/40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
+        <Text
+          as="span"
+          variant="body"
+          className="!text-[11px] font-black italic uppercase tracking-wider text-foreground"
+        >
+          {selectedOption?.label}
+        </Text>
+        <ChevronDown 
+          size={18} 
+          className={`text-foreground/40 transition-transform duration-300 group-hover:text-primary-light shrink-0 ${isOpen ? 'rotate-180' : ''}`} 
+        />
+      </Button>
       {isOpen && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-[calc(100%+8px)] left-0 w-full glass-card !p-2 z-20 shadow-2xl bg-background/95 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200 !rounded-[5px]">
-            <div className="flex flex-col gap-1">
-              {options.map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => {
-                    setSelected(opt);
-                    setIsOpen(false);
-                    onSelect?.(opt);
-                  }}
-                  className={`flex items-center justify-between p-4 rounded-[5px] text-[10px] font-black italic uppercase tracking-widest transition-all
-                    ${selected === opt 
-                      ? 'bg-primary-light text-white' 
-                      : 'text-foreground/40 hover:bg-primary-light/10 hover:text-primary-light'}`}
-                >
-                  {opt}
-                  {selected === opt && <Check size={14} />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
+        <Portal>
+          <Box
+            className="fixed inset-0 z-[9998]"
+            onClick={() => setIsOpen(false)}
+          />
+          <Stack
+            bg="glass"
+            border="glass"
+            padding={2}
+            className="absolute z-[9999] shadow-2xl rounded-[5px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+            style={{
+              top: coords.top,
+              left: coords.left,
+              width: coords.width,
+            }}
+          >
+            {normalizedOptions.map((opt) => (
+              <Button
+                key={opt.value}
+                type="button"
+                variant={selectedValue === opt.value ? "primary" : "glass"}
+                fullWidth
+                onClick={() => {
+                  setInternalValue(opt.value);
+                  setIsOpen(false);
+                  onChange?.(opt.value);
+                  onSelect?.(opt.value);
+                }}
+                className={`!p-4 !h-auto !justify-between !rounded-[5px] !text-[10px] !font-black !italic !uppercase !tracking-widest transition-all duration-200 flex items-center
+                  ${selectedValue === opt.value 
+                    ? '' 
+                    : '!bg-transparent !border-0 text-foreground/40 hover:!bg-primary-light/10 hover:!text-primary-light'}`}
+              >
+                <Text as="span">{opt.label}</Text>
+                {selectedValue === opt.value && <Check size={14} className="shrink-0" />}
+              </Button>
+            ))}
+          </Stack>
+        </Portal>
       )}
-    </div>
+    </Stack>
   );
 }

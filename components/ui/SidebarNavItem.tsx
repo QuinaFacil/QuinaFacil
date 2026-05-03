@@ -1,5 +1,8 @@
 import React from 'react';
 
+import { Text } from "@/components/ui/Text";
+import { Flex } from "@/components/ui/Flex";
+
 interface SidebarNavItemProps {
   icon: React.ReactNode;
   label: string;
@@ -9,15 +12,19 @@ interface SidebarNavItemProps {
 
 export function SidebarNavItem({ icon, label, active = false, onClick }: SidebarNavItemProps) {
   return (
-    <div 
+    <Flex
       onClick={onClick}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer group
+      padding={4}
+      align="center"
+      className={`gap-3 rounded-[5px] transition-all cursor-pointer group
       ${active ? 'bg-primary-light text-white shadow-lg shadow-primary-light/20' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
     >
-      <span className={active ? 'text-white' : 'text-primary-light opacity-50 group-hover:opacity-100 transition-opacity'}>
+      <Text
+        className={active ? 'text-white' : 'text-primary-light  group-hover:opacity-100 transition-opacity'}
+        as="span">
         {icon}
-      </span>
-      <span className="text-xs font-black italic uppercase tracking-wider">{label}</span>
-    </div>
+      </Text>
+      <Text variant="tiny" className="font-black italic uppercase tracking-wider" as="span">{label}</Text>
+    </Flex>
   );
 }

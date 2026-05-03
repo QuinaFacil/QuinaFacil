@@ -1,0 +1,122 @@
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { pathname } = request.nextUrl
+
+  // Proteção básica: Se não estiver logado
+  if (!user && (pathname.startsWith('/admin') || pathname.startsWith('/vendedor') || pathname.startsWith('/gerente') || pathname.startsWith('/dashboard'))) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  // Lógica de Redirecionamento por Role
+  if (user) {
+    // Buscamos o profile para saber o cargo
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      console.error('Middleware: Erro ao buscar profile:', profileError.message)
+    }
+
+    const role = profile?.role || null // Sem fallback automático para vendedor
+
+    // Tenta pegar o cargo do metadado como fallback (Plano B)
+    const userRole = profile?.role || user.user_metadata?.role || null
+
+    // Debug para terminal
+    console.log(`[Middleware] User: ${user.email} | Role: ${userRole} | Path: ${pathname}`)
+
+    // Se estiver no login, só redireciona se já tiver um cargo (já está logado)
+    if (pathname === '/login') {
+      if (userRole) {
+        const url = request.nextUrl.clone()
+        url.pathname = `/${userRole}/dashboard`
+        return NextResponse.redirect(url)
+      }
+      return supabaseResponse
+    }
+
+    // Se não conseguirmos determinar o cargo, não podemos prosseguir para áreas restritas
+    if (!userRole && (pathname.startsWith('/admin') || pathname.startsWith('/vendedor') || pathname.startsWith('/gerente') || pathname === '/dashboard')) {
+      console.warn('[Middleware] Cargo não encontrado. Redirecionando para login.')
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+
+    // Redirecionamentos de conveniência (Raiz ou Dashboard genérico)
+    if (pathname === '/' || pathname === '/dashboard') {
+      const url = request.nextUrl.clone()
+      url.pathname = `/${userRole}/dashboard`
+      return NextResponse.redirect(url)
+    }
+
+    // Bloqueio de rotas cruzadas (Segurança Estrita por Role)
+    const isAccessingAdmin = pathname.startsWith('/admin')
+    const isAccessingGerente = pathname.startsWith('/gerente')
+    const isAccessingVendedor = pathname.startsWith('/vendedor')
+
+    // REDIRECIONAMENTO AGRESSIVO PARA ADMIN (Exceto design-system e outros documentos livres)
+    if (userRole === 'admin' && !isAccessingAdmin && !pathname.startsWith('/ticket') && pathname !== '/design-system') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    // Se acessar rota de outro cargo, redireciona para o dashboard correto
+    if (isAccessingAdmin && role !== 'admin') {
+      const url = request.nextUrl.clone()
+      url.pathname = `/${role}/dashboard`
+      return NextResponse.redirect(url)
+    }
+
+    if (isAccessingGerente && role !== 'gerente') {
+      const url = request.nextUrl.clone()
+      url.pathname = `/${role}/dashboard`
+      return NextResponse.redirect(url)
+    }
+
+    if (isAccessingVendedor && role !== 'vendedor') {
+      const url = request.nextUrl.clone()
+      url.pathname = `/${role}/dashboard`
+      return NextResponse.redirect(url)
+    }
+  }
+
+  return supabaseResponse
+}
