@@ -145,26 +145,32 @@ export function WinnerList({ concursoId, winners, isLoading, onRefresh }: Winner
               </Flex>
             </Stack>
 
-            {/* Seção de Pagamento */}
-            <Stack gap={3} className="w-full md:w-[200px] md:border-l md:border-white/5 p-0 md:p-6">
-              <Stack padding={3} align="center" justify="center" bg={winner.pago ? 'success' : 'warning'} border={winner.pago ? 'success' : 'warning'} className="rounded-[5px]">
-                <Text variant="tiny" color={winner.pago ? 'success' : 'warning'} className="font-black">
-                  {winner.pago ? 'PRÊMIO PAGO' : 'PAGAMENTO PENDENTE'}
-                </Text>
+            {/* Grupo de Ações (Divisor + Pagamento) */}
+            <Flex gap={5} align="center" className="w-full md:w-auto">
+              {/* Divisor Vertical (Apenas Desktop) */}
+              <Box className="hidden md:block w-px self-stretch bg-white/5" />
+
+              {/* Seção de Pagamento */}
+              <Stack gap={5} justify="center" className="w-full md:w-[200px]">
+                <Stack padding={3} align="center" justify="center" bg={winner.pago ? 'success' : 'warning'} border={winner.pago ? 'success' : 'warning'} className="rounded-[5px]">
+                  <Text variant="tiny" color={winner.pago ? 'success' : 'warning'} className="font-black">
+                    {winner.pago ? 'PRÊMIO PAGO' : 'PAGAMENTO PENDENTE'}
+                  </Text>
+                </Stack>
+                
+                {!winner.pago && (
+                  <Button 
+                    variant="success" 
+                    fullWidth 
+                    icon={CheckCircle}
+                    onClick={() => handleConfirmPayment(winner.id)}
+                    loading={isProcessing === winner.id}
+                  >
+                    Confirmar Pagamento
+                  </Button>
+                )}
               </Stack>
-              
-              {!winner.pago && (
-                <Button 
-                  variant="success" 
-                  fullWidth 
-                  icon={CheckCircle}
-                  onClick={() => handleConfirmPayment(winner.id)}
-                  loading={isProcessing === winner.id}
-                >
-                  Confirmar Pagamento
-                </Button>
-              )}
-            </Stack>
+            </Flex>
           </Flex>
         </Box>
       ))}

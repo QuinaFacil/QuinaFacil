@@ -62,7 +62,7 @@ export async function updateSession(request: NextRequest) {
     // Buscamos o profile para saber o cargo
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, active')
       .eq('id', user.id)
       .single()
 
@@ -70,13 +70,24 @@ export async function updateSession(request: NextRequest) {
       console.error('Middleware: Erro ao buscar profile:', profileError.message)
     }
 
-    const role = profile?.role || null // Sem fallback automático para vendedor
-
-    // Tenta pegar o cargo do metadado como fallback (Plano B)
-    const userRole = profile?.role || user.user_metadata?.role || null
+    const role = profile?.role || null
+    const isActive = profile?.active ?? true // Fallback para true se não encontrar profile
 
     // Debug para terminal
-    console.log(`[Middleware] User: ${user.email} | Role: ${userRole} | Path: ${pathname}`)
+    console.log(`[Middleware] User: ${user.email} | Role: ${role} | Active: ${isActive} | Path: ${pathname}`)
+
+    // BLOQUEIO: Se o usuário estiver desativado, barramos o acesso a qualquer rota exceto logout (se houver) ou login
+    if (!isActive && pathname !== '/login') {
+      console.warn(`[Middleware] Usuário desativado tentando acessar: ${pathname}`)
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      // Opcional: Adicionar um parâmetro para avisar o usuário
+      url.searchParams.set('error', 'deactivated')
+      return NextResponse.redirect(url)
+    }
+
+    // Tenta pegar o cargo do metadado como fallback (Plano B)
+    const userRole = role || user.user_metadata?.role || null
 
     // Se estiver no login, só redireciona se já tiver um cargo (já está logado)
     if (pathname === '/login') {

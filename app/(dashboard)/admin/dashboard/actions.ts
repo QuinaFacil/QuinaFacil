@@ -46,7 +46,7 @@ export async function getDashboardStatsAction(): Promise<AdminDashboardStats | n
     const { data: activeContest } = await supabase
       .from('concursos')
       .select('*')
-      .neq('status', 'completed')
+      .neq('status', 'finished')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();

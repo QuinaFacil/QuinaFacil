@@ -102,7 +102,7 @@ export default function AdminDashboardPage() {
                 <StatCard
                   label="Tickets Emitidos"
                   value={stats?.totalTickets || 0}
-                  sub="Concurso referência"
+                  sub={stats?.activeContest ? `No Concurso #${stats.activeContest.concurso_numero}` : "Aguardando novo concurso"}
                   icon={Ticket}
                   bg="glass"
                 />
