@@ -2,13 +2,23 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error(
+      '[updateSession] Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY (ex.: em Vercel → Settings → Environment Variables).'
+    )
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -32,6 +42,13 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
+
+  // Sem landing: raiz vai direto para o login (quem já está logado cai no bloco abaixo e vai ao dashboard)
+  if (!user && pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
 
   // Proteção básica: Se não estiver logado
   if (!user && (pathname.startsWith('/admin') || pathname.startsWith('/vendedor') || pathname.startsWith('/gerente') || pathname.startsWith('/dashboard'))) {
@@ -81,6 +98,9 @@ export async function updateSession(request: NextRequest) {
 
     // Redirecionamentos de conveniência (Raiz ou Dashboard genérico)
     if (pathname === '/' || pathname === '/dashboard') {
+      if (!userRole) {
+        return supabaseResponse
+      }
       const url = request.nextUrl.clone()
       url.pathname = `/${userRole}/dashboard`
       return NextResponse.redirect(url)
@@ -99,21 +119,22 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Se acessar rota de outro cargo, redireciona para o dashboard correto
+    const destRole = userRole ?? role
     if (isAccessingAdmin && role !== 'admin') {
       const url = request.nextUrl.clone()
-      url.pathname = `/${role}/dashboard`
+      url.pathname = destRole ? `/${destRole}/dashboard` : '/login'
       return NextResponse.redirect(url)
     }
 
     if (isAccessingGerente && role !== 'gerente') {
       const url = request.nextUrl.clone()
-      url.pathname = `/${role}/dashboard`
+      url.pathname = destRole ? `/${destRole}/dashboard` : '/login'
       return NextResponse.redirect(url)
     }
 
     if (isAccessingVendedor && role !== 'vendedor') {
       const url = request.nextUrl.clone()
-      url.pathname = `/${role}/dashboard`
+      url.pathname = destRole ? `/${destRole}/dashboard` : '/login'
       return NextResponse.redirect(url)
     }
   }
