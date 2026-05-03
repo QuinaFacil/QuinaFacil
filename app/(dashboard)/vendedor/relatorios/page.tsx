@@ -9,7 +9,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { Text } from '@/components/ui/Text';
 import { Stack } from '@/components/ui/Stack';
 import { Badge } from '@/components/ui/Badge';
-import { ReportFilters } from '@/components/ui/ReportFilters';
+import { ReportFilters, type ReportFilterValues } from '@/components/ui/ReportFilters';
 import { getSellerReportStatsAction, type SellerTicket } from './actions';
 import { useQuery } from '@tanstack/react-query';
 import { DollarSign, Ticket, TrendingUp, Award, FileSearch } from 'lucide-react';
@@ -26,7 +26,7 @@ export default function VendedorRelatoriosPage() {
     queryFn: () => getSellerReportStatsAction(activeFilters),
   });
 
-  const handleFilter = (newFilters: Record<string, string>) => {
+  const handleFilter = (newFilters: ReportFilterValues) => {
     setActiveFilters({
       dateStart: newFilters.dateStart,
       dateEnd: newFilters.dateEnd

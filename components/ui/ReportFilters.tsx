@@ -15,20 +15,20 @@ interface ReportFiltersProps {
     sellers?: { id: string; name: string; manager_id?: string }[];
     cities?: string[];
   };
-  onFilter: (filters: Filters) => void;
+  onFilter: (filters: ReportFilterValues) => void;
   variant?: 'admin' | 'manager' | 'seller';
 }
 
-interface Filters {
+export type ReportFilterValues = {
   dateStart: string;
   dateEnd: string;
   managerId: string;
   sellerId: string;
   city: string;
-}
+};
 
 export function ReportFilters({ options, onFilter, variant = 'manager' }: ReportFiltersProps) {
-  const [filters, setFilters] = useState<Filters>({
+  const [filters, setFilters] = useState<ReportFilterValues>({
     dateStart: new Date().toISOString().split('T')[0],
     dateEnd: new Date().toISOString().split('T')[0],
     managerId: 'all',
