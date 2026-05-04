@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useState } from 'react';
-import { Upload, User } from 'lucide-react';
+import { Upload, Image as ImageIcon, LucideIcon } from 'lucide-react';
 import { Flex } from './Flex';
 import { Stack } from './Stack';
 import { Text } from './Text';
@@ -14,6 +14,7 @@ interface ImageUploadProps {
   onChange?: (file: File | null) => void;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  icon?: LucideIcon;
 }
 
 export function ImageUpload({
@@ -24,6 +25,7 @@ export function ImageUpload({
   onChange,
   className = '',
   size = 'md',
+  icon: Icon = ImageIcon
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(value ?? null);
@@ -67,13 +69,14 @@ export function ImageUpload({
               />
             </>
           ) : (
-            <User size={iconSize} className="text-foreground/20" />
+            <Icon size={iconSize} className="text-foreground/20" />
           )}
         </Flex>
 
         {/* Drop zone */}
         <Flex
           as="button"
+          type="button"
           tabIndex={0}
           align="center"
           justify="center"

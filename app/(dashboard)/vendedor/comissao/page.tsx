@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Section } from '@/components/ui/Section';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Box } from '@/components/ui/Box';
 import { Text } from '@/components/ui/Text';
@@ -123,10 +124,11 @@ export default function VendedorComissaoPage() {
               ))}
             </Stack>
           ) : (
-            <Stack padding={12} align="center" justify="center" className="text-center">
-              <History size={48} className="text-foreground/10" />
-              <Text variant="sub" color="muted">Nenhuma movimentação encontrada.</Text>
-            </Stack>
+            <EmptyState 
+              icon={History} 
+              description="Nenhuma movimentação encontrada." 
+              minHeight={200}
+            />
           )}
         </Box>
       </Section>

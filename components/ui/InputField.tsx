@@ -4,20 +4,23 @@ import { Box } from './Box';
 import { Flex } from './Flex';
 import { Text } from './Text';
 
-interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   icon?: LucideIcon;
   error?: string;
   rightElement?: React.ReactNode;
   className?: string;
+  as?: 'input' | 'textarea';
+  rows?: number;
 }
 
-export const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(({
+export const InputField = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, InputFieldProps>(({
   label,
   icon: Icon,
   error,
   rightElement,
   className = "",
+  as = 'input',
   ...props
 }, ref) => {
   const [showPassword, setShowPassword] = React.useState(false);
@@ -33,12 +36,20 @@ export const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(({
             <Icon size={18} />
           </Box>
         )}
-        <input
-          {...props}
-          ref={ref}
-          type={inputType}
-          className={`input-field w-full ${Icon ? 'pl-14' : ''} ${isPassword || rightElement ? 'pr-14' : ''} ${error ? '!border-error/50 !bg-error/5' : ''}`}
-        />
+        {as === 'textarea' ? (
+          <textarea
+            {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+            ref={ref as React.Ref<HTMLTextAreaElement>}
+            className={`input-field w-full py-4 ${Icon ? 'pl-14' : ''} ${rightElement ? 'pr-14' : ''} ${error ? '!border-error/50 !bg-error/5' : ''}`}
+          />
+        ) : (
+          <input
+            {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
+            ref={ref as React.Ref<HTMLInputElement>}
+            type={inputType}
+            className={`input-field w-full ${Icon ? 'pl-14' : ''} ${isPassword || rightElement ? 'pr-14' : ''} ${error ? '!border-error/50 !bg-error/5' : ''}`}
+          />
+        )}
 
         {isPassword && !rightElement && (
           <Flex

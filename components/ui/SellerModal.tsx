@@ -19,11 +19,22 @@ export interface Seller {
   email: string;
   phone: string;
   pix_key: string;
+  cpf?: string;
+  address?: string;
   active: boolean;
   avatar_url?: string;
   city?: string;
   created_at?: string;
 }
+
+const maskCPF = (value: string) => {
+  return value
+    .replace(/\D/g, '')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+    .replace(/(-\d{2})\d+?$/, '$1');
+};
 
 interface SellerModalProps {
   isOpen: boolean;
@@ -51,7 +62,9 @@ export function SellerModal({ isOpen, onClose, selectedSeller }: SellerModalProp
     email: selectedSeller?.email || '',
     password: '',
     phone: selectedSeller?.phone || '',
-    pix_key: selectedSeller?.pix_key || ''
+    pix_key: selectedSeller?.pix_key || '',
+    cpf: selectedSeller?.cpf || '',
+    address: selectedSeller?.address || ''
   });
 
   const handleSave = async () => {
@@ -147,6 +160,14 @@ export function SellerModal({ isOpen, onClose, selectedSeller }: SellerModalProp
           <Box padding={0}>
             <Stack gap={4}>
               <InputField
+                label="CPF"
+                placeholder="000.000.000-00"
+                value={formData.cpf}
+                maxLength={14}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })}
+                required
+              />
+              <InputField
                 label="WhatsApp / Contato"
                 placeholder="(00) 00000-0000"
                 value={formData.phone}
@@ -157,6 +178,13 @@ export function SellerModal({ isOpen, onClose, selectedSeller }: SellerModalProp
                 placeholder="CPF, E-mail ou Celular"
                 value={formData.pix_key}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, pix_key: e.target.value })}
+              />
+              <InputField
+                label="Endereço Completo"
+                placeholder="Rua, Número, Bairro, Cidade - UF"
+                value={formData.address}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, address: e.target.value })}
+                required
               />
             </Stack>
           </Box>

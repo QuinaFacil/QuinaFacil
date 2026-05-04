@@ -104,27 +104,41 @@ export async function getDashboardStatsAction(): Promise<AdminDashboardStats | n
     let timeRemaining = "--:--";
     let contestProgress = 0;
 
+    let finalEndTime: string | null = null;
     if (activeContest) {
-      let endTime: number;
+      let endTimeMs: number;
       if (activeContest.data_fim) {
-        endTime = new Date(activeContest.data_fim).getTime();
+        endTimeMs = new Date(activeContest.data_fim).getTime();
+      } else if ((activeContest as { draw_date?: string }).draw_date) {
+        endTimeMs = new Date((activeContest as { draw_date?: string }).draw_date!).getTime();
       } else {
         const fallbackEnd = new Date();
         fallbackEnd.setHours(17, 0, 0, 0);
-        endTime = fallbackEnd.getTime();
+        if (fallbackEnd.getTime() < new Date().getTime()) {
+          fallbackEnd.setDate(fallbackEnd.getDate() + 1);
+        }
+        endTimeMs = fallbackEnd.getTime();
       }
+      finalEndTime = new Date(endTimeMs).toISOString();
 
+      // Cálculo de Progresso e Tempo Restante (Server-side inicial)
       const start = new Date(activeContest.created_at).getTime();
       const now = new Date().getTime();
-      const total = endTime - start;
+      const total = endTimeMs - start;
       const elapsed = now - start;
-      contestProgress = Math.min(Math.max((elapsed / total) * 100, 0), 100);
+      contestProgress = total > 0 ? Math.min(Math.max((elapsed / total) * 100, 0), 100) : 100;
 
-      const diff = endTime - now;
+      const diff = endTimeMs - now;
       if (diff > 0) {
-        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+        const hours = Math.floor((diff % 86400000) / 3600000);
         const minutes = Math.floor((diff % 3600000) / 60000);
-        timeRemaining = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        
+        if (days > 0) {
+          timeRemaining = `${days}d ${hours.toString().padStart(2, '0')}h`;
+        } else {
+          timeRemaining = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        }
       } else {
         timeRemaining = "00:00";
         contestProgress = 100;
@@ -140,7 +154,7 @@ export async function getDashboardStatsAction(): Promise<AdminDashboardStats | n
       totalTickets,
       contestProgress,
       timeRemaining,
-      endTime: activeContest ? (activeContest.data_fim || new Date(new Date().setHours(17,0,0,0)).toISOString()) : null,
+      endTime: finalEndTime,
       timestamp: new Date().toISOString()
     };
   } catch (error: unknown) {

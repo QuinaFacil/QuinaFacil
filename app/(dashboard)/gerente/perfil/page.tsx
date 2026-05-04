@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMyProfileAction, updateMyProfileAction } from './actions';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Section } from '@/components/ui/Section';
 import { Box } from '@/components/ui/Box';
 import { Stack } from '@/components/ui/Stack';
 import { Grid } from '@/components/ui/Grid';
@@ -15,10 +14,17 @@ import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
 import { Heading } from '@/components/ui/Heading';
 import { Save, User, Mail, Phone, MapPin, Loader2 } from 'lucide-react';
+import { AlertModal } from '@/components/ui/AlertModal';
 
 export default function GerentePerfilPage() {
   const queryClient = useQueryClient();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [alertConfig, setAlertConfig] = useState({ 
+    isOpen: false, 
+    title: '', 
+    message: '', 
+    variant: 'info' as 'info' | 'success' | 'error' | 'warning' 
+  });
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['my-profile'],
@@ -31,9 +37,9 @@ export default function GerentePerfilPage() {
       if (result.success) {
         queryClient.invalidateQueries({ queryKey: ['my-profile'] });
         queryClient.invalidateQueries({ queryKey: ['current-user-profile'] });
-        alert("Perfil atualizado com sucesso!");
+        setAlertConfig({ isOpen: true, title: 'Sucesso', message: 'Perfil atualizado com sucesso!', variant: 'success' });
       } else {
-        alert(result.error || "Erro ao atualizar perfil.");
+        setAlertConfig({ isOpen: true, title: 'Erro', message: result.error || 'Erro ao atualizar perfil.', variant: 'error' });
       }
     }
   });
@@ -81,6 +87,7 @@ export default function GerentePerfilPage() {
                 size="lg"
                 value={profile?.avatar_url}
                 onChange={(file) => setAvatarFile(file)}
+                icon={User}
               />
 
               <Stack gap={1} align="center" className="w-full md:items-start">
@@ -104,49 +111,59 @@ export default function GerentePerfilPage() {
           {/* Coluna Direita: Formulário (8 colunas) */}
           <Box padding={6} bg="glass" border="glass" className="col-span-12 lg:col-span-8">
             <Stack gap={8}>
-              <Section num="01" title="Informações de Acesso">
-                <Grid cols={2} gap={5}>
-                  <InputField 
-                    label="Nome Completo" 
-                    name="name"
-                    defaultValue={profile?.name}
-                    icon={User}
-                    required
-                  />
-                  <InputField 
-                    label="E-mail de Login" 
-                    defaultValue={profile?.email}
-                    icon={Mail}
-                    disabled
-                  />
+              <Grid cols={2} gap={5}>
+                <InputField 
+                  label="Nome Completo" 
+                  name="name"
+                  defaultValue={profile?.name || ''}
+                  icon={User}
+                  required
+                />
+                <InputField 
+                  label="E-mail de Login" 
+                  defaultValue={profile?.email}
+                  icon={Mail}
+                  disabled
+                />
+
+                <InputField 
+                  label="WhatsApp" 
+                  name="phone"
+                  defaultValue={profile?.phone || ''}
+                  placeholder="(00) 00000-0000"
+                  icon={Phone}
+                />
+                <InputField 
+                  label="Cidade / Região" 
+                  defaultValue={profile?.city || ''}
+                  icon={MapPin}
+                  disabled
+                />
+                <InputField
+                  label="CPF"
+                  name="cpf"
+                  defaultValue={profile?.cpf || ''}
+                  placeholder="000.000.000-00"
+                  icon={User}
+                  required
+                />
+                <InputField
+                  label="Endereço Completo"
+                  name="address"
+                  defaultValue={profile?.address || ''}
+                  placeholder="Rua, Número, Bairro, Cidade - UF"
+                  icon={MapPin}
+                  required
+                />
+                <Box className="col-span-1 md:col-span-2">
                   <InputField 
                     label="Nova Senha (Opcional)" 
                     name="password"
                     type="password"
                     placeholder="Mínimo 6 caracteres"
                   />
-                </Grid>
-              </Section>
-
-              <Box padding={0} className="border-t border-white/5" />
-
-              <Section num="02" title="Contato e Localização">
-                <Grid cols={2} gap={5}>
-                  <InputField 
-                    label="WhatsApp" 
-                    name="phone"
-                    defaultValue={profile?.phone}
-                    placeholder="(00) 00000-0000"
-                    icon={Phone}
-                  />
-                  <InputField 
-                    label="Cidade / Região" 
-                    defaultValue={profile?.city}
-                    icon={MapPin}
-                    disabled
-                  />
-                </Grid>
-              </Section>
+                </Box>
+              </Grid>
 
               <Flex justify="end">
                 <Button 
@@ -164,6 +181,14 @@ export default function GerentePerfilPage() {
 
         </Grid>
       </Stack>
+
+      <AlertModal
+        isOpen={alertConfig.isOpen}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        variant={alertConfig.variant}
+        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </>
   );
 }

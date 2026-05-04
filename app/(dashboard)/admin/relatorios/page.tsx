@@ -12,8 +12,9 @@ import { Stack } from '@/components/ui/Stack';
 import { ReportFilters } from '@/components/ui/ReportFilters';
 import { getFilterOptionsAction, getReportStatsAction, type ReportFilters as IReportFilters, type ReportTicket } from './actions';
 import { useQuery } from '@tanstack/react-query';
-import { DollarSign, Ticket, Award, TrendingUp, FileSearch, MapPin, Clock } from 'lucide-react';
+import { FileSearch, MapPin, Clock, DollarSign, Ticket, Award, TrendingUp } from 'lucide-react';
 import { ListRow } from '@/components/ui/ListRow';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function AdminRelatoriosPage() {
   const [activeFilters, setActiveFilters] = useState<IReportFilters>({
@@ -125,19 +126,11 @@ export default function AdminRelatoriosPage() {
               </Stack>
             </Box>
           ) : (
-            <Flex direction="col" align="center" justify="center" padding={12} bg="glass" border="glass" className="w-full border-dashed min-h-[300px] border-primary-light/20">
-              <Stack gap={5} align="center" className="text-center">
-                <Flex align="center" justify="center" padding={6} bg="glass" rounded="none" className="opacity-20 rounded-full border border-primary-light/10">
-                  <FileSearch size={48} className="text-primary-light" />
-                </Flex>
-                <Stack gap={1}>
-                  <Text variant="label" color="primary">Aguardando Filtros</Text>
-                  <Text variant="description" color="muted" className="max-w-[280px] mx-auto">
-                    Selecione o período e os critérios de busca acima para auditar as transações detalhadas.
-                  </Text>
-                </Stack>
-              </Stack>
-            </Flex>
+            <EmptyState 
+              icon={FileSearch} 
+              description="Selecione o período e os critérios de busca acima para auditar as transações detalhadas." 
+              minHeight={300}
+            />
           )}
         </Stack>
       </Section>

@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAdminProfileAction, updateAdminProfileAction } from './actions';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Section } from '@/components/ui/Section';
 import { Box } from '@/components/ui/Box';
 import { Stack } from '@/components/ui/Stack';
 import { Grid } from '@/components/ui/Grid';
@@ -15,7 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
 import { Heading } from '@/components/ui/Heading';
 import { AlertModal } from '@/components/ui/AlertModal';
-import { Save, User, Mail, Phone, Loader2, ShieldCheck } from 'lucide-react';
+import { Save, User, Mail, Phone, Loader2, ShieldCheck, MapPin } from 'lucide-react';
 
 export default function AdminPerfilPage() {
   const queryClient = useQueryClient();
@@ -98,6 +97,7 @@ export default function AdminPerfilPage() {
                 size="lg"
                 value={profile?.avatar_url || ''}
                 onChange={(file) => setAvatarFile(file)}
+                icon={User}
               />
 
               <Stack gap={1} align="center" className="w-full md:items-start">
@@ -123,39 +123,51 @@ export default function AdminPerfilPage() {
           {/* Direita: Dados Simplificados */}
           <Box padding={6} bg="glass" border="glass" className="col-span-12 lg:col-span-8">
             <Stack gap={8}>
-              <Section 
-                num="01" 
-                title="Informações de Perfil" 
-              >
-                <Grid cols={2} gap={5}>
-                  <InputField
-                    label="Nome Completo"
-                    name="name"
-                    defaultValue={profile?.name}
-                    icon={User}
-                    required
-                  />
-                  <InputField
-                    label="E-mail de Acesso"
-                    defaultValue={profile?.email || ''}
-                    icon={Mail}
-                    disabled
-                  />
-                  <InputField
-                    label="WhatsApp Administrativo"
-                    name="phone"
-                    defaultValue={profile?.phone || ''}
-                    placeholder="(00) 00000-0000"
-                    icon={Phone}
-                  />
-                  <InputField
-                    label="Nova Senha (Opcional)"
-                    name="password"
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                </Grid>
-              </Section>
+              <Grid cols={2} gap={5}>
+                <InputField
+                  label="Nome Completo"
+                  name="name"
+                  defaultValue={profile?.name || ''}
+                  icon={User}
+                  required
+                />
+                <InputField
+                  label="E-mail de Acesso"
+                  defaultValue={profile?.email || ''}
+                  icon={Mail}
+                  disabled
+                />
+                <InputField
+                  label="WhatsApp Administrativo"
+                  name="phone"
+                  defaultValue={profile?.phone || ''}
+                  placeholder="(00) 00000-0000"
+                  icon={Phone}
+                  required
+                />
+                <InputField
+                  label="CPF"
+                  name="cpf"
+                  defaultValue={profile?.cpf || ''}
+                  placeholder="000.000.000-00"
+                  icon={User}
+                  required
+                />
+                <InputField
+                  label="Endereço Completo"
+                  name="address"
+                  defaultValue={profile?.address || ''}
+                  placeholder="Rua, Número, Bairro, Cidade - UF"
+                  icon={MapPin}
+                  required
+                />
+                <InputField
+                  label="Nova Senha (Opcional)"
+                  name="password"
+                  type="password"
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </Grid>
 
               <Flex justify="end">
                 <Button

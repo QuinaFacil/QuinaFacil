@@ -5,7 +5,7 @@ import { Portal } from './Portal';
 import { Box } from './Box';
 import { Stack } from './Stack';
 import { Button } from "@/components/ui/Button";
-import { Text } from "@/components/ui/Text";
+import { Text } from "./Text";
 
 interface CustomOption {
   value: string;
@@ -89,8 +89,10 @@ export function CustomSelect({
       >
         <Text
           as="span"
-          variant="body"
-          className="!text-[11px] font-black italic uppercase tracking-wider text-foreground"
+          size="xs"
+          weight="bold"
+          transform="uppercase"
+          className="italic tracking-wider text-foreground"
         >
           {selectedOption?.label}
         </Text>
@@ -133,7 +135,15 @@ export function CustomSelect({
                     ? '' 
                     : '!bg-transparent !border-0 text-foreground/40 hover:!bg-primary-light/10 hover:!text-primary-light'}`}
               >
-                <Text as="span">{opt.label}</Text>
+                <Text 
+                  as="span" 
+                  size="xs" 
+                  weight="bold" 
+                  transform="uppercase" 
+                  className="italic tracking-widest"
+                >
+                  {opt.label}
+                </Text>
                 {selectedValue === opt.value && <Check size={14} className="shrink-0" />}
               </Button>
             ))}

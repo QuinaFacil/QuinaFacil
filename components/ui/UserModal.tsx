@@ -20,6 +20,8 @@ export interface UserInput {
   phone?: string;
   city?: string;
   pix_key?: string;
+  cpf?: string;
+  address?: string;
 }
 
 export interface UserProfile extends UserInput {
@@ -62,8 +64,19 @@ export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes
     manager_id: selectedUser?.manager_id || '',
     phone: selectedUser?.phone || '',
     city: selectedUser?.city || '',
-    pix_key: selectedUser?.pix_key || ''
+    pix_key: selectedUser?.pix_key || '',
+    cpf: selectedUser?.cpf || '',
+    address: selectedUser?.address || ''
   });
+
+  const maskCPF = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
 
   const { data: gerentes } = useQuery({
     queryKey: ['gerentes-options'],
@@ -187,10 +200,19 @@ export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes
                 />
               )}
               <InputField
+                label="CPF"
+                placeholder="000.000.000-00"
+                value={formData.cpf}
+                maxLength={14}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })}
+                required
+              />
+              <InputField
                 label="Telefone / WhatsApp"
                 placeholder="(00) 00000-0000"
                 value={formData.phone}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone: e.target.value })}
+                required
               />
               {formData.role !== 'gerente' && (
                 <InputField
@@ -200,6 +222,13 @@ export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, pix_key: e.target.value })}
                 />
               )}
+              <InputField
+                label="Endereço Completo"
+                placeholder="Rua, Número, Bairro, Cidade - UF"
+                value={formData.address}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, address: e.target.value })}
+                required
+              />
             </Stack>
           </Box>
 

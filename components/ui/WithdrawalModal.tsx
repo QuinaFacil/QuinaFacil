@@ -20,11 +20,25 @@ interface WithdrawalModalProps {
 }
 
 export function WithdrawalModal({ isOpen, onClose, availableBalance, pixKey }: WithdrawalModalProps) {
-  const [amount, setAmount] = useState<string>('');
+  const [amount, setAmount] = useState<string>('0,00');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const numAmount = Number(amount.replace(',', '.'));
+  const maskCurrency = (value: string) => {
+    const cleanValue = value.replace(/\D/g, "");
+    if (!cleanValue) return "0,00";
+    const numberValue = parseInt(cleanValue) / 100;
+    return new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(numberValue);
+  };
+
+  const parseCurrency = (value: string) => {
+    return parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0;
+  };
+
+  const numAmount = parseCurrency(amount);
   const isValid = numAmount >= 50 && numAmount <= availableBalance;
 
   async function handleSubmit() {
@@ -71,9 +85,9 @@ export function WithdrawalModal({ isOpen, onClose, availableBalance, pixKey }: W
           <InputField
             label="Valor do Resgate"
             placeholder="0,00"
-            type="number"
+            type="text"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => setAmount(maskCurrency(e.target.value))}
             error={numAmount > 0 && numAmount < 50 ? "Mínimo de R$ 50,00" : numAmount > availableBalance ? "Saldo insuficiente" : undefined}
           />
 

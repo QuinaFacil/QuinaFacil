@@ -1,9 +1,12 @@
 import React from 'react';
 
-interface TextProps {
+export interface TextProps {
   children?: React.ReactNode;
   variant?: 'body' | 'description' | 'label' | 'sub' | 'tiny' | 'error' | 'auxiliary';
   color?: 'default' | 'muted' | 'primary' | 'success' | 'error' | 'white' | 'info' | 'warning';
+  weight?: 'normal' | 'medium' | 'bold' | 'black';
+  size?: 'xs' | 'sm' | 'base' | 'lg' | 'xl';
+  transform?: 'none' | 'uppercase' | 'capitalize' | 'lowercase';
   className?: string;
   as?: 'p' | 'span' | 'div';
 }
@@ -12,6 +15,9 @@ export function Text({
   children,
   variant = 'body',
   color = 'default',
+  weight,
+  size,
+  transform,
   className = "",
   as = 'p'
 }: TextProps) {
@@ -36,10 +42,39 @@ export function Text({
     warning: '!text-warning',
   };
 
+  const weights = {
+    normal: 'font-normal',
+    medium: 'font-medium',
+    bold: 'font-bold',
+    black: 'font-black',
+  };
+
+  const sizes = {
+    xs: 'text-xs',
+    sm: 'text-sm',
+    base: 'text-base',
+    lg: 'text-lg',
+    xl: 'text-xl',
+  };
+
+  const transforms = {
+    none: 'normal-case',
+    uppercase: 'uppercase',
+    capitalize: 'capitalize',
+    lowercase: 'lowercase',
+  };
+
   const Tag = as as React.ElementType;
 
   return (
-    <Tag className={`${variants[variant]} ${color !== 'default' ? colors[color] : ''} ${className}`}>
+    <Tag className={`
+      ${variants[variant]} 
+      ${color !== 'default' ? colors[color] : ''} 
+      ${weight ? weights[weight] : ''}
+      ${size ? sizes[size] : ''}
+      ${transform ? transforms[transform] : ''}
+      ${className}
+    `.replace(/\s+/g, ' ').trim()}>
       {children}
     </Tag>
   );

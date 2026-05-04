@@ -46,7 +46,8 @@ export function DrawTimer({
         return;
       }
 
-      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
       const minutes = Math.floor((diff % 3600000) / 60000);
       const seconds = Math.floor((diff % 60000) / 1000);
 
@@ -54,7 +55,11 @@ export function DrawTimer({
       const mStr = minutes.toString().padStart(2, '0');
       const sStr = seconds.toString().padStart(2, '0');
 
-      setDisplayTime(`${hStr}:${mStr}:${sStr}`);
+      if (days > 0) {
+        setDisplayTime(`${days}d ${hStr}:${mStr}:${sStr}`);
+      } else {
+        setDisplayTime(`${hStr}:${mStr}:${sStr}`);
+      }
     };
 
     updateTimer();

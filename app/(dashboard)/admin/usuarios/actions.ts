@@ -15,6 +15,8 @@ export interface UserInput {
   phone?: string;
   city?: string;
   pix_key?: string;
+  cpf?: string;
+  address?: string;
 }
 
 /**
@@ -185,6 +187,8 @@ export async function createUserAction(formData: UserInput) {
         phone: formData.phone || null,
         city: finalCity || null,
         pix_key: formData.pix_key || null,
+        cpf: formData.cpf || null,
+        address: formData.address || null,
         active: true
       });
 
@@ -244,7 +248,9 @@ export async function updateUserAction(id: string, formData: UserInput) {
         manager_id: formData.manager_id || null,
         phone: formData.phone || null,
         city: finalCity || null,
-        pix_key: formData.pix_key || null
+        pix_key: formData.pix_key || null,
+        cpf: formData.cpf || null,
+        address: formData.address || null
       })
       .eq('id', id);
 

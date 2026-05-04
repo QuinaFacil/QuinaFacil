@@ -6,7 +6,7 @@ import { Stack } from './Stack';
 import { Flex } from './Flex';
 import { Box } from './Box';
 
-import { Heading } from "@/components/ui/Heading";
+
 import { Text } from "@/components/ui/Text";
 
 interface DigitalTicketProps {
@@ -19,10 +19,15 @@ interface DigitalTicketProps {
     cpf?: string;
     telefone?: string;
   };
+  vendedorNome?: string;
+  prizeInfo?: {
+    amount?: number;
+    description?: string;
+  };
   className?: string;
 }
 
-export function DigitalTicket({ auditId, dateTime, contest, numbers, buyer, className = "" }: DigitalTicketProps) {
+export function DigitalTicket({ auditId, dateTime, contest, numbers, buyer, vendedorNome, prizeInfo, className = "" }: DigitalTicketProps) {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -40,99 +45,188 @@ export function DigitalTicket({ auditId, dateTime, contest, numbers, buyer, clas
           padding={10}
           bg="white"
           rounded="none"
-          className="relative overflow-hidden text-black shadow-xl ticket-container"
+          className="relative overflow-hidden text-black shadow-xl ticket-container max-w-[380px] mx-auto"
           id="printable-ticket"
         >
           <Box className="serrated-edge top-[-10px] rotate-180 opacity-20 print:hidden" />
 
-          {/* Watermark Logo */}
-          <Flex align="end" justify="start" className="absolute inset-0 pointer-events-none opacity-[0.12] print:opacity-35 p-5 select-none">
+          {/* Watermark Logo (Yellow) */}
+          <Flex align="end" justify="start" className="absolute inset-0 pointer-events-none opacity-[0.15] print:opacity-40 p-5 select-none">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/favicon.png" alt="" width={60} height={60} className="grayscale" />
+            <img 
+              src="/favicon.png" 
+              alt="" 
+              width={60} 
+              height={60} 
+              style={{ filter: 'invert(85%) sepia(60%) saturate(3000%) hue-rotate(5deg) brightness(105%) contrast(100%)' }} 
+            />
           </Flex>
 
-          <Stack gap={10} className="font-mono relative z-10">
+          <Stack gap={8} className="font-sans relative z-10 text-[#1e3a5f]">
             {/* Header Block */}
-            <Stack gap={4}>
-              <Stack gap={1} align="center">
-                <Heading
-                  className="text-xl uppercase tracking-tighter"
-                  level={4}>QUINA FÁCIL</Heading>
-                <Text variant="tiny" className="font-bold opacity-60" as="span">AUDITORIA: {auditId}</Text>
-              </Stack>
-              <Box className="w-full border-b border-black/10" />
+            <Stack gap={1} align="center">
+              <Text className="text-2xl font-black tracking-tighter text-[#1e3a5f]">QUINA FÁCIL</Text>
             </Stack>
 
-            {/* Information & Numbers Block */}
-            <Stack gap={8}>
-              <Stack gap={3}>
-                <Flex justify="between">
-                  <Text
-                    variant="tiny"
-                    className="font-bold opacity-40 uppercase tracking-tighter"
-                    as="span">Data/Hora:</Text>
-                  <Text variant="tiny" className="font-bold" as="span">{dateTime}</Text>
-                </Flex>
-                <Flex justify="between">
-                  <Text
-                    variant="tiny"
-                    className="font-bold opacity-40 uppercase tracking-tighter"
-                    as="span">Concurso:</Text>
-                  <Text variant="tiny" className="font-bold" as="span">{contest}</Text>
-                </Flex>
+            <Box className="w-full border-b border-dashed border-[#1e3a5f]/30" />
 
-                {buyer?.nome && (
-                  <Flex justify="between" className="border-t border-black/5 pt-2">
-                    <Text
-                      variant="tiny"
-                      className="font-bold opacity-40 uppercase tracking-tighter"
-                      as="span">Comprador:</Text>
-                    <Text variant="tiny" className="font-bold truncate max-w-[150px]" as="span">{buyer.nome}</Text>
-                  </Flex>
-                )}
-                {buyer?.cpf && (
-                  <Flex justify="between">
-                    <Text
-                      variant="tiny"
-                      className="font-bold opacity-40 uppercase tracking-tighter"
-                      as="span">CPF:</Text>
-                    <Text variant="tiny" className="font-bold" as="span">{buyer.cpf}</Text>
-                  </Flex>
-                )}
-              </Stack>
-
-              <Flex justify="center" gap={3} wrap>
-                {numbers.map((n, idx) => (
-                  <Flex
-                    key={idx}
-                    align="center"
-                    justify="center"
-                    className="w-10 h-10 border-2 border-black font-black text-lg bg-white shadow-sm rounded-[5px]"
-                  >
-                    <Text variant="body" className="font-black">
-                      {n > 0 ? String(n).padStart(2, '0') : '--'}
-                    </Text>
-                  </Flex>
-                ))}
+            <Stack gap={1}>
+              <Flex justify="between" align="center" className="w-full">
+                <Text variant="tiny" className="font-black uppercase tracking-widest text-[10px]">Aposta Simples</Text>
+                <Text variant="tiny" className="font-black text-[10px]">{contest}</Text>
               </Flex>
+              <Stack gap={0} className="w-full">
+                <Text variant="tiny" className="font-bold text-[9px]">DATA: {dateTime}</Text>
+                <Text variant="tiny" className="font-bold uppercase text-[9px]">COLABORADOR: {vendedorNome || 'QUINA FÁCIL'}</Text>
+                <Text variant="tiny" className="font-bold uppercase text-[9px]">CLIENTE: {buyer?.nome || 'CONSUMIDOR'}</Text>
+                <Text variant="tiny" className="font-bold text-[9px]">DOC/TEL: {buyer?.cpf || buyer?.telefone || '---'}</Text>
+              </Stack>
             </Stack>
 
-            {/* Footer Block */}
-            <Stack gap={6} align="center">
-              <Box className="w-full border-t border-dashed border-black/20" />
-              <Stack gap={3} align="center">
-                {mounted ? (
-                  <QRCodeSVG value={ticketUrl} size={80} level="M" />
-                ) : (
-                  <Box className="w-[80px] h-[80px] bg-black/5 rounded animate-pulse" />
-                )}
-                <Text
-                  variant="tiny"
-                  className="font-bold opacity-40 uppercase tracking-widest text-center"
-                  as="span">
-                  www.quinafacil.com.br
+            <Box className="w-full border-b border-dashed border-[#1e3a5f]/30" />
+
+            {/* Column Headers */}
+            <Flex justify="start" className="px-1">
+              <Text variant="tiny" className="font-black text-[10px]">APOSTA</Text>
+            </Flex>
+
+            {/* Numbers Section */}
+            <Stack gap={4} align="center">
+              <Text variant="tiny" className="font-black tracking-widest text-[10px]">SEUS NÚMEROS APOSTADOS</Text>
+              <Stack gap={2} align="center" className="w-full">
+                {/* Top Row: 3 numbers */}
+                <Flex justify="center" gap={3}>
+                  {numbers.slice(0, 3).map((n, idx) => (
+                    <Flex
+                      key={`top-${idx}`}
+                      align="center"
+                      justify="center"
+                      className="w-14 h-14 rounded-full bg-[#1e3a5f] relative shadow-md"
+                    >
+                      {/* Decorative Cardinal Notches */}
+                      <Box className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-1.5 bg-white rounded-b-full" />
+                      <Box className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-1.5 bg-white rounded-t-full" />
+                      <Box className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-3 bg-white rounded-r-full" />
+                      <Box className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-3 bg-white rounded-l-full" />
+                      
+                      {/* Inner White Ball */}
+                      <Flex
+                        align="center"
+                        justify="center"
+                        className="w-10 h-10 rounded-full bg-white border-[3px] border-[#1e3a5f]/80"
+                      >
+                        <Text className="text-xl font-black text-[#1e3a5f]">
+                          {n > 0 ? String(n).padStart(2, '0') : '--'}
+                        </Text>
+                      </Flex>
+                    </Flex>
+                  ))}
+                </Flex>
+                {/* Bottom Row: 2 numbers */}
+                <Flex justify="center" gap={3}>
+                  {numbers.slice(3, 5).map((n, idx) => (
+                    <Flex
+                      key={`bottom-${idx}`}
+                      align="center"
+                      justify="center"
+                      className="w-14 h-14 rounded-full bg-[#1e3a5f] relative shadow-md"
+                    >
+                      {/* Decorative Cardinal Notches */}
+                      <Box className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-1.5 bg-white rounded-b-full" />
+                      <Box className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-1.5 bg-white rounded-t-full" />
+                      <Box className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-3 bg-white rounded-r-full" />
+                      <Box className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-3 bg-white rounded-l-full" />
+
+                      {/* Inner White Ball */}
+                      <Flex
+                        align="center"
+                        justify="center"
+                        className="w-10 h-10 rounded-full bg-white border-[3px] border-[#1e3a5f]/80"
+                      >
+                        <Text className="text-xl font-black text-[#1e3a5f]">
+                          {n > 0 ? String(n).padStart(2, '0') : '--'}
+                        </Text>
+                      </Flex>
+                    </Flex>
+                  ))}
+                </Flex>
+              </Stack>
+            </Stack>
+
+            {/* Pricing Details */}
+            <Stack gap={1} className="px-1">
+              <Flex justify="between">
+                <Text variant="tiny" className="font-bold text-[9px]">Aposta:</Text>
+                <Text variant="tiny" className="font-bold text-[9px]">R$ 5,00</Text>
+              </Flex>
+              <Flex justify="between">
+                <Text variant="tiny" className="font-bold text-[9px]">Quantidade de Campanhas:</Text>
+                <Text variant="tiny" className="font-bold text-[9px]">1</Text>
+              </Flex>
+              <Flex justify="between">
+                <Text variant="tiny" className="font-bold text-[9px]">Total Apostado:</Text>
+                <Text variant="tiny" className="font-bold text-[9px]">R$ 5,00</Text>
+              </Flex>
+              <Stack gap={0} className="border-t border-dashed border-[#1e3a5f]/10 pt-1">
+                <Text variant="tiny" className="font-bold text-[8px] opacity-60">Possível Prêmio:</Text>
+                <Text variant="tiny" className="font-black text-[10px] text-[#1e3a5f]">
+                  {prizeInfo?.amount ? `R$ ${Number(prizeInfo.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}
+                  {prizeInfo?.description ? ` ${prizeInfo.description}` : (!prizeInfo?.amount ? '(Confira no site)' : '')}
                 </Text>
               </Stack>
+            </Stack>
+
+            <Box className="w-full border-b border-dashed border-[#1e3a5f]/30" />
+
+            {/* Ticket Identifier */}
+            <Stack gap={1} align="center" className="w-full">
+              <Text variant="tiny" className="font-bold uppercase tracking-widest opacity-60 text-[8px] text-center">BILHETE</Text>
+              <Text className="text-lg font-black tracking-[0.1em] uppercase text-[#1e3a5f] text-center leading-tight break-all">
+                {auditId}
+              </Text>
+            </Stack>
+
+            <Box className="w-full border-b border-dashed border-[#1e3a5f]/30" />
+
+            <Text variant="tiny" className="font-black text-center tracking-widest text-[10px]">CONFIRA SEUS NÚMEROS NO SITE</Text>
+
+            {/* Bottom Status Bar */}
+            <Box className="w-full py-3 text-center !bg-[#1e3a5f]">
+              <Text className="text-white font-black uppercase tracking-widest italic text-sm">Aposta Realizada</Text>
+            </Box>
+
+            {/* Legal Rules Section */}
+            <Stack gap={2} className="opacity-70 pt-2 border-t border-[#1e3a5f]/10">
+              <Text variant="tiny" className="text-[7px] leading-tight font-bold">
+                • Só serão válidos os 5 primeiros números emitidos pela Lotofácil.
+              </Text>
+              <Text variant="tiny" className="text-[7px] leading-tight font-bold">
+                • Sorteios somente aos sábados pelo canal oficial da Loteria Federal às 20h.
+              </Text>
+              <Text variant="tiny" className="text-[7px] leading-tight font-bold">
+                • Os prêmios da Quina e da Quadra serão divididos pela quantidade de ganhadores.
+              </Text>
+              <Text variant="tiny" className="text-[7px] leading-tight font-bold">
+                • Os prêmios são acumulativos, podendo chegar até R$ 100.000,00.
+              </Text>
+              <Text variant="tiny" className="text-[7px] leading-tight font-bold">
+                • Todos os prêmios serão pagos na segunda-feira em até 48h após o sorteio.
+              </Text>
+            </Stack>
+
+            {/* QR Code Footer */}
+            <Stack gap={4} align="center" className="pt-2">
+              {mounted ? (
+                <QRCodeSVG value={ticketUrl} size={70} level="M" fgColor="#1e3a5f" />
+              ) : (
+                <Box className="w-[70px] h-[70px] bg-black/5 rounded animate-pulse" />
+              )}
+              <Text
+                variant="tiny"
+                className="font-bold opacity-40 uppercase tracking-[0.3em] text-center text-[8px]"
+                as="span">
+                www.quinafacil.com.br
+              </Text>
             </Stack>
           </Stack>
 
@@ -146,31 +240,45 @@ export function DigitalTicket({ auditId, dateTime, contest, numbers, buyer, clas
             margin: 0;
             size: auto;
           }
-          body {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
             background: white !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
+          /* Hide EVERYTHING */
           body * {
-            visibility: hidden;
+            visibility: hidden !important;
           }
+          /* Show ONLY the ticket and its content */
           #printable-ticket, #printable-ticket * {
-            visibility: visible;
+            visibility: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
+          /* Force the ticket to be the ONLY thing rendered at the top-left */
+          /* NUCLEAR RESET FOR ANCESTORS */
+          /* We make all parents "invisible" to the layout engine (display: contents)
+             so the ticket behaves as if it were a direct child of the body. */
+          div:has(#printable-ticket),
+          main:has(#printable-ticket),
+          section:has(#printable-ticket) {
+            display: contents !important;
+          }
+
           #printable-ticket {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 80mm;
-            padding: 5mm;
-            box-shadow: none !important;
-            border: none !important;
-          }
-          .ticket-container {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 80mm !important;
+            padding: 8mm !important;
+            margin: 0 !important;
             background: white !important;
             color: black !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+            visibility: visible !important;
+            z-index: 99999 !important;
+            display: block !important; /* Ensure the ticket itself IS a block */
           }
         }
       `}</style>

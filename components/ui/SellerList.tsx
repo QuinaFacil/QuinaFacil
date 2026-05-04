@@ -12,7 +12,8 @@ import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { SellerModal, type Seller } from '@/components/ui/SellerModal';
-import { User, Phone, Edit2, Trash2, Power, MapPin, Wallet, Loader2 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { User, Phone, Edit2, Trash2, Power, MapPin, Wallet, Loader2, Users } from 'lucide-react';
 
 export interface SellerListHandle {
   openNew: () => void;
@@ -23,7 +24,7 @@ export const SellerList = React.forwardRef<SellerListHandle, Record<string, unkn
   const [selectedSeller, setSelectedSeller] = React.useState<Seller | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [sellerToDelete, setSellerToDelete] = React.useState<string | null>(null);
-  
+
   const { data: sellers, isLoading } = useQuery({
     queryKey: ['sellers'],
     queryFn: () => getSellersAction()
@@ -77,15 +78,11 @@ export const SellerList = React.forwardRef<SellerListHandle, Record<string, unkn
 
   if (!sellers || sellers.length === 0) {
     return (
-      <Box padding={12} bg="glass" border="glass" className="text-center border-dashed border-white/10">
-        <Stack gap={4} align="center">
-          <User size={48} className="opacity-10" />
-          <Stack gap={1}>
-            <Text variant="label" color="muted">Sua equipe está vazia</Text>
-            <Text variant="tiny" color="muted">Cadastre seu primeiro vendedor para começar as vendas.</Text>
-          </Stack>
-        </Stack>
-      </Box>
+      <EmptyState 
+        icon={Users} 
+        description="Cadastre seu primeiro vendedor para começar as vendas." 
+        minHeight={300}
+      />
     );
   }
 
@@ -96,7 +93,7 @@ export const SellerList = React.forwardRef<SellerListHandle, Record<string, unkn
           <ListRow
             key={seller.id}
             title={seller.name || 'Sem Nome'}
-            sub={seller.email} 
+            sub={seller.email}
             amount={seller.active ? 'Ativo' : 'Inativo'}
             time={`Desde ${new Date(seller.created_at || Date.now()).toLocaleDateString('pt-BR')}`}
             variant={seller.active ? 'success' : 'error'}
@@ -105,21 +102,21 @@ export const SellerList = React.forwardRef<SellerListHandle, Record<string, unkn
             className="cursor-default"
             actions={
               <Flex gap={2}>
-                <Button 
-                  variant="glass" 
-                  icon={Edit2} 
+                <Button
+                  variant="glass"
+                  icon={Edit2}
                   size="icon"
                   onClick={() => handleEdit(seller)}
                 />
-                <Button 
+                <Button
                   variant={seller.active ? "success" : "danger"}
-                  icon={Power} 
+                  icon={Power}
                   size="icon"
                   onClick={() => toggleMutation.mutate({ id: seller.id, active: !seller.active })}
                 />
-                <Button 
-                  variant="glass" 
-                  icon={Trash2} 
+                <Button
+                  variant="glass"
+                  icon={Trash2}
                   size="icon"
                   onClick={() => setSellerToDelete(seller.id)}
                 />
@@ -127,27 +124,27 @@ export const SellerList = React.forwardRef<SellerListHandle, Record<string, unkn
             }
           >
             <Flex align="center" gap={3} wrap justify="end">
-               {seller.phone && (
-                 <Badge variant="success" icon={Phone} className="shrink-0">
-                   {seller.phone}
-                 </Badge>
-               )}
+              {seller.phone && (
+                <Badge variant="success" icon={Phone} className="shrink-0">
+                  {seller.phone}
+                </Badge>
+              )}
 
-               {seller.pix_key && (
-                 <Badge variant="warning" icon={Wallet} className="shrink-0">
-                   {seller.pix_key}
-                 </Badge>
-               )}
-               
-               <Badge variant="info" icon={MapPin} className="shrink-0">
-                 {seller.city || 'Regional'}
-               </Badge>
+              {seller.pix_key && (
+                <Badge variant="warning" icon={Wallet} className="shrink-0">
+                  {seller.pix_key}
+                </Badge>
+              )}
+
+              <Badge variant="info" icon={MapPin} className="shrink-0">
+                {seller.city || 'Regional'}
+              </Badge>
             </Flex>
           </ListRow>
         ))}
       </Box>
 
-      <SellerModal 
+      <SellerModal
         key={selectedSeller?.id || 'new'}
         isOpen={isModalOpen}
         onClose={() => {

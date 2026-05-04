@@ -9,6 +9,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { Text } from '@/components/ui/Text';
 import { Stack } from '@/components/ui/Stack';
 import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { ReportFilters, type ReportFilterValues } from '@/components/ui/ReportFilters';
 import { getSellerReportStatsAction, type SellerTicket } from './actions';
 import { useQuery } from '@tanstack/react-query';
@@ -86,7 +87,7 @@ export default function VendedorRelatoriosPage() {
                   <Text variant="sub">Serial / Ticket</Text>
                 </th>
                 <th className="p-4">
-                  <Text variant="sub">Concurso</Text>
+                  <Text variant="sub">Campanha</Text>
                 </th>
                 <th className="p-4">
                   <Text variant="sub">Data/Hora</Text>
@@ -131,18 +132,12 @@ export default function VendedorRelatoriosPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="p-24 text-center">
-                    <Stack gap={4} align="center">
-                      <Box bg="glass" padding={6} rounded="full" className="opacity-20">
-                        <FileSearch size={48} className="text-primary-light" />
-                      </Box>
-                      <Stack gap={1}>
-                        <Text variant="sub">Sem Registros</Text>
-                        <Text variant="tiny" color="muted" className="max-w-[280px] mx-auto">
-                          Não encontramos vendas para o período selecionado.
-                        </Text>
-                      </Stack>
-                    </Stack>
+                  <td colSpan={5}>
+                    <EmptyState 
+                      icon={FileSearch} 
+                      description="Não encontramos vendas para o período selecionado." 
+                      minHeight={300}
+                    />
                   </td>
                 </tr>
               )}

@@ -29,13 +29,13 @@ export default function AdminConcursosPage() {
   return (
     <>
       <PageHeader 
-        title="Gestão de Concursos" 
-        description="Administração de sorteios, lançamento de dezenas e processamento oficial de ganhadores."
+        title="Gestão de Campanhas" 
+        description="Administração de campanhas, lançamento de dezenas e processamento oficial de ganhadores."
       />
 
       <Section 
         num="01" 
-        title="Histórico de Concursos"
+        title="Histórico de Campanhas"
         action={
           <Button 
             variant="primary" 
@@ -43,7 +43,7 @@ export default function AdminConcursosPage() {
             onClick={handleOpenNew}
             fullWidth
           >
-            Novo Concurso
+            Nova Campanha
           </Button>
         }
       >

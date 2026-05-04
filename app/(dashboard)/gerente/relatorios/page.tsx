@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Section } from '@/components/ui/Section';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Box } from '@/components/ui/Box';
 import { Grid } from '@/components/ui/Grid';
@@ -124,19 +125,11 @@ export default function GerenteRelatoriosPage() {
                 />
               ))
             ) : (
-              <Box padding={12} className="text-center">
-                <Stack gap={6} align="center">
-                  <Flex align="center" justify="center" bg="glass" padding={6} className="w-20 h-20 rounded-full">
-                    <FileSearch size={48} className="text-primary-light/20" />
-                  </Flex>
-                  <Stack gap={2}>
-                    <Text variant="sub" color="muted">AGUARDANDO FILTROS</Text>
-                    <Text variant="description" color="muted">
-                      Audite as transações da sua equipe selecionando os filtros acima.
-                    </Text>
-                  </Stack>
-                </Stack>
-              </Box>
+              <EmptyState 
+                icon={FileSearch} 
+                description="Audite as transações da sua equipe selecionando os filtros acima." 
+                minHeight={300}
+              />
             )}
           </Stack>
         </Box>

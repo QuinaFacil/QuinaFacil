@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, ArrowRight } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { login } from './actions';
@@ -16,16 +16,13 @@ import { Alert } from '@/components/ui/Alert';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const error = searchParams.get('error');
-    if (error === 'deactivated') {
-      setErrorMessage("Sua conta foi desativada. Entre em contato com o suporte.");
-    }
-  }, [searchParams]);
+  const searchError = searchParams.get('error') === 'deactivated' 
+    ? "Sua conta foi desativada. Entre em contato com o suporte." 
+    : null;
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const displayError = errorMessage || searchError;
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -62,9 +59,9 @@ export default function LoginPage() {
                 <Text variant="description">Entre com suas credenciais para acessar o painel.</Text>
               </Stack>
 
-              {errorMessage && (
+              {displayError && (
                 <Alert variant="error" className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  {errorMessage}
+                  {displayError}
                 </Alert>
               )}
 

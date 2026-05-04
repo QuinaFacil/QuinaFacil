@@ -14,7 +14,8 @@ import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { UserModal, type UserProfile, type UserInput } from '@/components/ui/UserModal';
-import { User, Shield, Briefcase, UserCheck, Phone, Edit2, Trash2, Power, MapPin, Wallet, Loader2 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { User, Shield, Briefcase, UserCheck, Phone, Edit2, Trash2, Power, MapPin, Wallet, Loader2, Users } from 'lucide-react';
 
 export interface UserListHandle {
   openNew: () => void;
@@ -106,9 +107,11 @@ export const UserList = React.forwardRef<UserListHandle, Record<string, unknown>
 
   if (!users || users.length === 0) {
     return (
-      <Box padding={10} className="text-center opacity-40">
-        <Text variant="label">Nenhum usuário encontrado.</Text>
-      </Box>
+      <EmptyState 
+        icon={Users} 
+        description="Nenhum usuário encontrado no sistema." 
+        minHeight={300}
+      />
     );
   }
 

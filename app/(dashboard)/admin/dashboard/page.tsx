@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Section } from '@/components/ui/Section';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Box } from '@/components/ui/Box';
 import { Flex } from '@/components/ui/Flex';
@@ -20,6 +21,7 @@ import {
   Users,
   AlertCircle,
   Ticket,
+  Clock,
   ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
@@ -53,7 +55,7 @@ export default function AdminDashboardPage() {
         {/* LADO ESQUERDO: Pulse e KPIs */}
         <Box padding={0} className="col-span-12 lg:col-span-8">
           <Stack gap={10}>
-            {/* Seção 01: Concurso Ativo */}
+            {/* Seção 01: Campanha Ativa */}
             <Section num="01" title="Pulse do Sistema">
               <Grid cols={2} gap={6}>
                 {stats?.activeContest ? (
@@ -61,14 +63,16 @@ export default function AdminDashboardPage() {
                     time={stats?.timeRemaining || "--:--"}
                     endTime={stats?.endTime || undefined}
                     progress={stats?.contestProgress || 0}
-                    label="CONCURSO ATIVO"
-                    statusText={`Faltam poucos minutos para o sorteio do concurso #${stats.activeContest.concurso_numero}`}
+                    label="CAMPANHA ATIVA"
+                    statusText={`Faltam poucos minutos para o sorteio da campanha #${stats.activeContest.concurso_numero}`}
                     className="h-full"
                   />
                 ) : (
-                  <Flex align="center" justify="center" padding={8} bg="glass" border="glass" className="min-h-[160px]">
-                    <Text variant="description" color="muted">Nenhum concurso ativo no momento</Text>
-                  </Flex>
+                  <EmptyState 
+                    icon={Clock} 
+                    description="Nenhuma campanha ativa no momento." 
+                    minHeight={160}
+                  />
                 )}
 
                 <StatCard
@@ -102,7 +106,7 @@ export default function AdminDashboardPage() {
                 <StatCard
                   label="Tickets Emitidos"
                   value={stats?.totalTickets || 0}
-                  sub={stats?.activeContest ? `No Concurso #${stats.activeContest.concurso_numero}` : "Aguardando novo concurso"}
+                  sub={stats?.activeContest ? `Na Campanha #${stats.activeContest.concurso_numero}` : "Aguardando nova campanha"}
                   icon={Ticket}
                   bg="glass"
                 />
@@ -148,9 +152,11 @@ export default function AdminDashboardPage() {
                   )}
 
                   {(!activity || activity.length === 0) && (
-                    <Flex align="center" justify="center" padding={10} className="opacity-30">
-                      <Text variant="tiny" color="muted">SEM ATIVIDADE RECENTE</Text>
-                    </Flex>
+                    <EmptyState 
+                      icon={Ticket} 
+                      description="Sem atividade recente registrada." 
+                      minHeight={160}
+                    />
                   )}
                 </Stack>
               </Box>

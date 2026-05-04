@@ -9,9 +9,9 @@ import {
   Award
 } from 'lucide-react';
 import { Section } from '@/components/ui/Section';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Box } from '@/components/ui/Box';
-import { Text } from '@/components/ui/Text';
 import { Grid } from '@/components/ui/Grid';
 import { StatCard } from '@/components/ui/StatCard';
 import { Stack } from '@/components/ui/Stack';
@@ -115,9 +115,11 @@ export default function GerenteDashboardPage() {
                     />
                   ))}
                   {(!stats?.sellerRanking || stats.sellerRanking.length === 0) && (
-                    <Box padding={10} className="text-center">
-                      <Text variant="tiny" color="muted">Sem vendas hoje</Text>
-                    </Box>
+                    <EmptyState 
+                      icon={Award} 
+                      description="Sem vendas hoje" 
+                      minHeight={100}
+                    />
                   )}
                 </Stack>
               </Box>
@@ -139,9 +141,11 @@ export default function GerenteDashboardPage() {
                     />
                   ))}
                   {(!stats?.recentActivity || stats.recentActivity.length === 0) && (
-                    <Box padding={10} className="text-center">
-                      <Text variant="tiny" color="muted">Aguardando vendas...</Text>
-                    </Box>
+                    <EmptyState 
+                      icon={Ticket} 
+                      description="Aguardando vendas..." 
+                      minHeight={100}
+                    />
                   )}
                 </Stack>
               </Box>

@@ -8,6 +8,8 @@ export interface Contest {
   id: string;
   concurso_numero: number;
   status: string;
+  banner_url?: string;
+  description?: string;
   created_at: string;
 }
 

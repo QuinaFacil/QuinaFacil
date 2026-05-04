@@ -8,6 +8,7 @@ import {
   History
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/StatCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Heading } from '@/components/ui/Heading';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
@@ -101,15 +102,11 @@ export default async function DashboardPage() {
                     })}
                   </Stack>
                 ) : (
-                  <Flex align="center" justify="center" className="flex-1 p-12 min-h-[250px] w-full text-center">
-                    <Flex direction="col" align="center" gap={3}>
-                      <Flex align="center" justify="center" rounded="none" className="w-12 h-12 bg-foreground/5 text-foreground/20">
-                        <History size={24} />
-                      </Flex>
-                      <Text variant="description" color="muted">Aguardando primeira venda</Text>
-                      <Text variant="description" color="muted" className="max-w-[200px] text-center">Os bilhetes vendidos na rede aparecerão aqui em tempo real.</Text>
-                    </Flex>
-                  </Flex>
+                  <EmptyState 
+                    icon={History} 
+                    description="Aguardando primeira venda. Os bilhetes vendidos aparecerão aqui em tempo real." 
+                    minHeight={250}
+                  />
                 )}
               </Card>
           </Stack>

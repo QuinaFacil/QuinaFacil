@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Ticket, CheckCircle2, AlertTriangle, Printer, User, CreditCard, Phone } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Section } from '@/components/ui/Section';
 import { Grid } from '@/components/ui/Grid';
 import { Stack } from '@/components/ui/Stack';
@@ -118,61 +119,99 @@ export default function EmitirBilhetePage() {
           {!isSalesOpen ? (
             <Badge variant="error" dot icon={AlertTriangle}>VENDAS ENCERRADAS (17h - 06h)</Badge>
           ) : contest ? (
-            <Badge variant="success" dot icon={CheckCircle2}>VENDAS ABERTAS: #{contest.concurso_numero}</Badge>
+            <Badge variant="success" dot icon={CheckCircle2}>CAMPANHA ATIVA: #{contest.concurso_numero}</Badge>
           ) : (
-            <Badge variant="error" dot icon={AlertTriangle}>SISTEMA INDISPONÍVEL</Badge>
+            <Badge variant="error" dot icon={AlertTriangle}>NENHUMA CAMPANHA ATIVA</Badge>
           )}
         </PageHeader>
 
         <Section>
-          <Grid cols={1} gap={12} className="lg:grid-cols-2 lg:items-start">
+          <Stack gap={8}>
+            {contest?.banner_url && (
+              <Box padding={0} className="w-full h-48 md:h-72 rounded-[5px] overflow-hidden border border-white/5 relative group shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src={contest.banner_url} 
+                  alt="Banner da Campanha" 
+                  className="w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105" 
+                />
+                <Box className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                {contest.description && (
+                  <Box className="absolute bottom-6 left-6 right-6">
+                    <Text size="xl" weight="black" transform="uppercase" color="white" className="drop-shadow-2xl max-w-2xl">
+                      {contest.description}
+                    </Text>
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            <Grid cols={1} gap={12} className={contest ? "lg:grid-cols-2 lg:items-start" : "w-full"}>
             {/* Coluna 01: O Volante */}
             <Stack gap={8}>
-              <NumberPicker
-                num="1"
-                label="Escolha os Números"
-                subLabel="Selecione exatamente 5 dezenas"
-                maxSelections={5}
-                selectedNumbers={selectedNumbers}
-                onSelectionChange={setSelectedNumbers}
-              />
+              {contest ? (
+                <NumberPicker
+                  num="1"
+                  label="Escolha os Números"
+                  subLabel="Selecione exatamente 5 dezenas"
+                  maxSelections={5}
+                  selectedNumbers={selectedNumbers}
+                  onSelectionChange={setSelectedNumbers}
+                />
+              ) : (
+                <EmptyState 
+                  icon={AlertTriangle} 
+                  description="Não há nenhuma campanha ativa no momento." 
+                  minHeight={300}
+                  variant="error"
+                />
+              )}
 
-              <Button
-                variant="primary"
-                fullWidth
-                size="lg"
-                icon={Ticket}
-                disabled={!isReady || !isSalesOpen}
-                onClick={openEmissionModal}
-              >
-                {!isSalesOpen ? "Vendas Encerradas (17h-06h)" : isReady ? "Avançar para Emissão" : "Selecione 5 números"}
-              </Button>
+              {contest && (
+                <Button
+                  variant="primary"
+                  fullWidth
+                  size="lg"
+                  icon={Ticket}
+                  disabled={!isReady || !isSalesOpen}
+                  onClick={openEmissionModal}
+                >
+                  {!isSalesOpen ? "Vendas Encerradas (17h-06h)" : isReady ? "Avançar para Emissão" : "Selecione 5 números"}
+                </Button>
+              )}
             </Stack>
 
             {/* Coluna 02: O Bilhete (Visualização) */}
-            <Stack gap={6}>
-              <Box padding={0} className="relative">
-                <Box className="absolute left-1/2 -translate-x-1/2 z-20">
-                  <Badge variant="info" className="shadow-lg">PREVIEW</Badge>
+            {contest && (
+              <Stack gap={6}>
+                <Box padding={0} className="relative h-[492px] overflow-y-auto overflow-x-hidden border border-white/5 rounded-[5px] bg-black/10 custom-scrollbar">
+                  <Box className="absolute left-1/2 -translate-x-1/2 z-20 top-4">
+                    <Badge variant="info" className="shadow-lg">PREVIEW</Badge>
+                  </Box>
+
+                  <Flex align="start" justify="center" className="p-10 w-full h-full">
+                    <Box className="origin-top scale-[0.85]">
+                      <DigitalTicket
+                        auditId="AGUARDANDO..."
+                        dateTime={new Date().toLocaleString('pt-BR')}
+                        contest={contest ? `#${contest.concurso_numero}` : "---"}
+                        numbers={(() => {
+                          const nums = [...selectedNumbers];
+                          while (nums.length < 5) nums.push(0);
+                          return nums.slice(0, 5);
+                        })()}
+                      />
+                    </Box>
+                  </Flex>
                 </Box>
 
-                <DigitalTicket
-                  auditId="AGUARDANDO..."
-                  dateTime={new Date().toLocaleString('pt-BR')}
-                  contest={contest ? `#${contest.concurso_numero}` : "---"}
-                  numbers={(() => {
-                    const nums = [...selectedNumbers];
-                    while (nums.length < 5) nums.push(0);
-                    return nums.slice(0, 5);
-                  })()}
-                />
-              </Box>
-
-              <Alert variant="info">
-                A emissão do bilhete gera uma comissão imediata de 20%. Verifique as dezenas com o cliente antes de avançar.
-              </Alert>
-            </Stack>
-          </Grid>
+                <Alert variant="info">
+                  A emissão do bilhete gera uma comissão imediata de 20%. Verifique as dezenas com o cliente antes de avançar.
+                </Alert>
+              </Stack>
+            )}
+            </Grid>
+          </Stack>
         </Section>
       </Stack>
 
@@ -253,7 +292,7 @@ export default function EmitirBilhetePage() {
                 placeholder="Nome completo do comprador"
                 icon={User}
                 value={buyerInfo.nome}
-                onChange={e => setBuyerInfo({ ...buyerInfo, nome: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setBuyerInfo({ ...buyerInfo, nome: e.target.value })}
               />
               <Grid cols={1} gap={4} className="md:grid-cols-2">
                 <InputField
@@ -261,14 +300,14 @@ export default function EmitirBilhetePage() {
                   icon={CreditCard}
                   value={buyerInfo.cpf}
                   maxLength={14}
-                  onChange={e => setBuyerInfo({ ...buyerInfo, cpf: maskCPF(e.target.value) })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setBuyerInfo({ ...buyerInfo, cpf: maskCPF(e.target.value) })}
                 />
                 <InputField
                   placeholder="Telefone"
                   icon={Phone}
                   value={buyerInfo.telefone}
                   maxLength={15}
-                  onChange={e => setBuyerInfo({ ...buyerInfo, telefone: maskTelefone(e.target.value) })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setBuyerInfo({ ...buyerInfo, telefone: maskTelefone(e.target.value) })}
                 />
               </Grid>
             </Grid>

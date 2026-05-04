@@ -5,23 +5,26 @@ import { useQuery } from '@tanstack/react-query';
 import { Section } from '@/components/ui/Section';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ListRow } from '@/components/ui/ListRow';
-import { Badge } from '@/components/ui/Badge';
+
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Box } from '@/components/ui/Box';
 import { Stack } from '@/components/ui/Stack';
 import { Flex } from '@/components/ui/Flex';
 import { Text } from '@/components/ui/Text';
 import { InputField } from '@/components/ui/InputField';
-import { 
-  Ticket, 
-  Search, 
-  Loader2, 
+import {
+  Ticket,
+  Search,
+  Loader2,
   ExternalLink,
   User,
   Hash,
-  Calendar
+  Calendar,
+  Printer
 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import { getTicketsAction } from '@/app/(dashboard)/actions';
-import Link from 'next/link';
+
 
 interface TicketData {
   id: string;
@@ -49,8 +52,8 @@ export function TicketsView() {
         description="Histórico completo e rastreabilidade de todos os bilhetes registrados no sistema."
       />
 
-      <Section 
-        num="01" 
+      <Section
+        num="01"
         title="Histórico de Emissões"
         action={
           <InputField
@@ -73,46 +76,61 @@ export function TicketsView() {
               </Flex>
             ) : tickets && tickets.length > 0 ? (
               (tickets as unknown as TicketData[]).map((ticket) => (
-                <Link key={ticket.id} href={`/ticket/${ticket.serial_number}`}>
-                  <ListRow
-                    title={ticket.serial_number}
-                    sub={
-                      <Flex gap={3} align="center" className="flex-wrap">
-                        <Flex align="center" gap={1}>
-                          <User size={10} className="text-primary-light" />
-                          <Text variant="tiny" className="whitespace-nowrap">{ticket.vendedor?.name}</Text>
-                        </Flex>
-                        <Flex align="center" gap={1}>
-                          <Hash size={10} className="text-primary-light" />
-                          <Text variant="tiny" className="whitespace-nowrap">Conc. #{ticket.concurso?.concurso_numero}</Text>
-                        </Flex>
-                        <Flex align="center" gap={1}>
-                          <Calendar size={10} className="text-primary-light" />
-                          <Text variant="tiny" className="whitespace-nowrap">{new Date(ticket.created_at).toLocaleString('pt-BR')}</Text>
-                        </Flex>
+                <ListRow
+                  key={ticket.id}
+                  title={ticket.serial_number}
+                  sub={
+                    <Flex gap={3} align="center" className="flex-wrap">
+                      <Flex align="center" gap={1}>
+                        <User size={10} className="text-primary-light" />
+                        <Text variant="tiny" className="whitespace-nowrap">{ticket.vendedor?.name}</Text>
                       </Flex>
-                    }
-                    amount={`R$ ${Number(ticket.amount).toFixed(2)}`}
-                    time=""
-                    icon={Ticket}
-                    variant={ticket.status === 'confirmed' ? 'success' : 'neutral'}
-                  >
-                    <Badge variant="glass" icon={ExternalLink} size="xs">
+                      <Flex align="center" gap={1}>
+                        <Hash size={10} className="text-primary-light" />
+                        <Text variant="tiny" className="whitespace-nowrap">Campanha #{ticket.concurso?.concurso_numero}</Text>
+                      </Flex>
+                      <Flex align="center" gap={1}>
+                        <Calendar size={10} className="text-primary-light" />
+                        <Text variant="tiny" className="whitespace-nowrap">{new Date(ticket.created_at).toLocaleString('pt-BR')}</Text>
+                      </Flex>
+                    </Flex>
+                  }
+                  amount={`R$ ${Number(ticket.amount).toFixed(2)}`}
+                  time=""
+                  icon={Ticket}
+                  variant={ticket.status === 'confirmed' ? 'success' : 'neutral'}
+                  href={`/ticket/${ticket.serial_number}`}
+                >
+                  <Flex gap={2} align="center">
+                    <Button 
+                      variant="glass" 
+                      size="sm" 
+                      icon={Printer}
+                      className="border-white/10 hover:border-primary-light/40"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.open(`/ticket/${ticket.serial_number}?print=true`, '_blank');
+                      }}
+                    >
+                      Imprimir
+                    </Button>
+                    <Button 
+                      variant="glass" 
+                      size="sm" 
+                      icon={ExternalLink}
+                      className="border-primary-light/20 text-primary-light hover:bg-primary-light/10"
+                    >
                       Ver Detalhes
-                    </Badge>
-                  </ListRow>
-                </Link>
+                    </Button>
+                  </Flex>
+                </ListRow>
               ))
             ) : (
-              <Flex align="center" justify="center" padding={12}>
-                <Stack gap={5} align="center" className="text-center">
-                  <Search size={48} className="text-primary-light opacity-10" />
-                  <Stack gap={1}>
-                    <Text variant="label" color="muted">Nenhum bilhete encontrado</Text>
-                    <Text variant="tiny" color="muted">Tente um número de série diferente ou verifique os filtros.</Text>
-                  </Stack>
-                </Stack>
-              </Flex>
+              <EmptyState 
+                icon={Search} 
+                description="Tente um número de série diferente ou verifique os filtros." 
+                minHeight={300}
+              />
             )}
           </Stack>
         </Box>

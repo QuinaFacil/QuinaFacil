@@ -11,6 +11,8 @@ export interface AdminProfile {
   phone: string | null;
   avatar_url: string | null;
   email?: string | null;
+  cpf?: string | null;
+  address?: string | null;
 }
 
 /**
@@ -47,6 +49,8 @@ export async function updateAdminProfileAction(formData: FormData) {
 
     const name = formData.get('name') as string;
     const phone = formData.get('phone') as string;
+    const cpf = formData.get('cpf') as string;
+    const address = formData.get('address') as string;
     const password = formData.get('password') as string;
     const avatarFile = formData.get('avatar') as File | null;
 
@@ -81,6 +85,8 @@ export async function updateAdminProfileAction(formData: FormData) {
       .update({
         name,
         phone,
+        cpf,
+        address,
         avatar_url
       })
       .eq('id', user.id);

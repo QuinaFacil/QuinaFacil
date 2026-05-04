@@ -1,20 +1,23 @@
 import React from 'react';
 import { getTicketBySerialAction } from '../actions';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { DigitalTicket } from '@/components/ui/DigitalTicket';
 import { Flex } from '@/components/ui/Flex';
 import { Box } from '@/components/ui/Box';
 import { Stack } from '@/components/ui/Stack';
 import { Text } from '@/components/ui/Text';
-import { Heading } from '@/components/ui/Heading';
+
 import { CheckCircle2, ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 interface TicketPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ print?: string }>;
 }
 
-export default async function PublicTicketPage({ params }: TicketPageProps) {
+export default async function PublicTicketPage({ params, searchParams }: TicketPageProps) {
   const { id } = await params;
+  const { print } = await searchParams;
   const ticket = await getTicketBySerialAction(id);
 
   if (!ticket) {
@@ -23,15 +26,12 @@ export default async function PublicTicketPage({ params }: TicketPageProps) {
         <Stack gap={5} align="center" className="max-w-md w-full text-center">
           <Box padding={6} bg="glass" border="glass" className="rounded-[5px]">
             <Stack gap={6} align="center">
-              <Flex className="w-16 h-16 bg-error/10 rounded-[5px]" align="center" justify="center">
-                <AlertCircle size={32} className="text-error" />
-              </Flex>
-              <Stack gap={2}>
-                <Heading level={2} size="2xl">Bilhete não encontrado</Heading>
-                <Text variant="description" color="muted">
-                  Não conseguimos localizar este bilhete em nosso sistema. Verifique o número de série e tente novamente.
-                </Text>
-              </Stack>
+              <EmptyState 
+                icon={AlertCircle} 
+                description="Bilhete não encontrado em nosso sistema. Verifique o número de série e tente novamente." 
+                variant="error"
+                minHeight={200}
+              />
               <Link href="/" className="w-full">
                 <Box padding={4} bg="glass" border="glass" className="rounded-[5px] hover:bg-white/5 transition-colors">
                   <Flex align="center" justify="center" gap={2}>
@@ -75,6 +75,11 @@ export default async function PublicTicketPage({ params }: TicketPageProps) {
           dateTime={new Date(ticket.created_at).toLocaleString('pt-BR')}
           contest={`#${ticket.concursos?.concurso_numero || '---'}`}
           numbers={ticket.numbers}
+          vendedorNome={ticket.vendedor?.name}
+          prizeInfo={{
+            amount: ticket.concursos?.prize_amount,
+            description: ticket.concursos?.description
+          }}
           buyer={{
             nome: ticket.comprador_nome,
             cpf: ticket.comprador_cpf,
@@ -95,6 +100,9 @@ export default async function PublicTicketPage({ params }: TicketPageProps) {
           </Text>
         </Stack>
       </Stack>
+      {print === 'true' && (
+        <script dangerouslySetInnerHTML={{ __html: 'window.onload = function() { setTimeout(function() { window.print(); }, 500); }' }} />
+      )}
     </Flex>
   );
 }

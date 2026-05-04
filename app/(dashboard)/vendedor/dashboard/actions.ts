@@ -25,6 +25,7 @@ export interface DashboardStats {
   contestProgress: number;
   timeRemaining: string;
   endTime: string;
+  pendingTicketsCount: number;
   timestamp: string;
 }
 
@@ -60,6 +61,13 @@ export async function getSellerDashboardStatsAction(): Promise<DashboardStats | 
 
     const salesToday = todayTickets?.reduce((acc, t) => acc + Number(t.amount), 0) || 0;
     const ticketsTodayCount = todayTickets?.length || 0;
+
+    // 2b. Tickets Pendentes (Não validados)
+    const { count: pendingTicketsCount } = await supabase
+      .from('tickets')
+      .select('*', { count: 'exact', head: true })
+      .eq('vendedor_id', user.id)
+      .eq('is_validated', false);
 
     // 3. Saldo de Comissões Disponíveis (Ganhos - Saques Aprovados)
     const { data: commissions } = await supabase
@@ -132,6 +140,7 @@ export async function getSellerDashboardStatsAction(): Promise<DashboardStats | 
       contestProgress,
       timeRemaining,
       endTime: activeContest?.draw_date || new Date(new Date().setHours(17,0,0,0)).toISOString(),
+      pendingTicketsCount: pendingTicketsCount || 0,
       timestamp: new Date().toISOString()
     };
   } catch (error: unknown) {

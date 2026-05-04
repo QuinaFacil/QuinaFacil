@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Section } from '@/components/ui/Section';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Grid } from '@/components/ui/Grid';
 import { StatCard } from '@/components/ui/StatCard';
@@ -166,15 +167,11 @@ export default function AuditLogsPage() {
                   );
                 })
               ) : (
-                <Flex align="center" justify="center" padding={12}>
-                  <Stack gap={5} align="center" className="text-center">
-                    <Search size={48} className="text-primary-light opacity-10" />
-                    <Stack gap={1}>
-                      <Text variant="label" color="muted">Nenhum log encontrado</Text>
-                      <Text variant="tiny" color="muted">Tente alterar os filtros de categoria.</Text>
-                    </Stack>
-                  </Stack>
-                </Flex>
+                <EmptyState 
+                  icon={Search} 
+                  description="Nenhum log encontrado. Tente alterar os filtros de categoria." 
+                  minHeight={300}
+                />
               )}
             </Stack>
           </Box>

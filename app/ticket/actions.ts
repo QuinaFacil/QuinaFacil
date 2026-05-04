@@ -11,7 +11,12 @@ export async function getTicketBySerialAction(serial: string) {
       *,
       concursos (
         concurso_numero,
-        draw_date
+        draw_date,
+        prize_amount,
+        description
+      ),
+      vendedor:profiles!vendedor_id (
+        name
       )
     `)
     .eq('serial_number', serial)

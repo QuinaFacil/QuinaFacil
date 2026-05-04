@@ -11,6 +11,8 @@ export interface SellerInput {
   password?: string;
   phone?: string;
   pix_key?: string;
+  cpf?: string;
+  address?: string;
 }
 
 /**
@@ -140,6 +142,8 @@ export async function createSellerAction(formData: SellerInput) {
         phone: formData.phone || null,
         city: profile.city, // Herda a cidade do gerente
         pix_key: formData.pix_key || null,
+        cpf: formData.cpf || null,
+        address: formData.address || null,
         active: true
       });
 
@@ -182,7 +186,9 @@ export async function updateSellerAction(id: string, formData: SellerInput) {
       .update({
         name: formData.name,
         phone: formData.phone || null,
-        pix_key: formData.pix_key || null
+        pix_key: formData.pix_key || null,
+        cpf: formData.cpf || null,
+        address: formData.address || null
       })
       .eq('id', id);
 

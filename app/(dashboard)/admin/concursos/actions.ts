@@ -3,15 +3,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { AuditService } from '@/services/AuditService';
 
-export interface Concurso {
-  id: string;
-  concurso_numero: number;
-  draw_date: string;
-  status: 'open' | 'closed' | 'finished';
-  numeros: number[] | null;
-  prize_amount: number;
-  created_at: string;
-}
+import type { Concurso } from '@/types/lottery';
 
 export async function getConcursosAction(): Promise<Concurso[]> {
   const supabase = await createClient();
@@ -110,4 +102,28 @@ export async function processResultAction(id: string) {
   });
 
   return true;
+}
+
+export async function uploadContestBannerAction(concursoNumero: number, file: File) {
+  const supabase = await createClient();
+  
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${concursoNumero}_banner_${Date.now()}.${fileExt}`;
+  const filePath = `banners/${fileName}`;
+
+  console.log(`[Storage] Uploading to lottery-assets: ${filePath}`);
+  const { error: uploadError } = await supabase.storage
+    .from('lottery-assets')
+    .upload(filePath, file);
+
+  if (uploadError) {
+    console.error("[Storage] Upload Error:", uploadError);
+    throw new Error(uploadError.message);
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('lottery-assets')
+    .getPublicUrl(filePath);
+
+  return publicUrl;
 }

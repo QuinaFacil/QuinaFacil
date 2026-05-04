@@ -580,5 +580,68 @@ module.exports = {
     "no-tailwind-important-override": noTailwindImportantOverride,
     "no-visual-className-override": noVisualClassNameOverride,
     "no-box-layout-class": noBoxLayoutClass,
+    "no-browser-popup": {
+      meta: {
+        type: "problem",
+        docs: {
+          description: "Proíbe uso de popups nativos do navegador (alert, confirm, prompt).",
+        },
+        messages: {
+          noPopup: "❌ O uso de `{{ name }}()` é proibido.\n✅ Use os componentes do Design System: `<AlertModal>`, `<ConfirmModal>` ou o sistema de Toasts.\nMotivo: Design System — popups nativos quebram a identidade visual e o controle de estado da aplicação.",
+        },
+        schema: [],
+      },
+      create(context) {
+        return {
+          CallExpression(node) {
+            if (node.callee.type === "Identifier") {
+              const name = node.callee.name;
+              if (["alert", "confirm", "prompt"].includes(name)) {
+                context.report({ node, messageId: "noPopup", data: { name } });
+              }
+            }
+          },
+        };
+      },
+    },
+    "no-default-browser-scroll": {
+      meta: {
+        type: "problem",
+        docs: {
+          description: "Proíbe o uso do scroll padrão do navegador. É obrigatório usar `custom-scrollbar` ou `no-scrollbar`.",
+        },
+        messages: {
+          enforceCustomScroll: "❌ Container com scroll detectado sem a classe de estilização customizada.\n✅ Adicione `custom-scrollbar` para scroll visível ou `no-scrollbar` para ocultá-lo.\nMotivo: Design System — o scroll padrão do navegador quebra a estética premium Liquid Glass.",
+        },
+        schema: [],
+      },
+      create(context) {
+        const scrollClasses = new Set(["overflow-auto", "overflow-y-auto", "overflow-x-auto", "overflow-scroll", "overflow-y-scroll", "overflow-x-scroll"]);
+        const customScrollClasses = new Set(["custom-scrollbar", "no-scrollbar"]);
+
+        return {
+          JSXAttribute(node) {
+            if (node.name.name !== "className") return;
+            const classes = extractClasses(node);
+            const classSet = new Set(classes.map(c => c.cls));
+
+            let hasScroll = false;
+            let hasCustom = false;
+
+            for (const cls of classSet) {
+              if (scrollClasses.has(cls)) hasScroll = true;
+              if (customScrollClasses.has(cls)) hasCustom = true;
+            }
+
+            if (hasScroll && !hasCustom) {
+              context.report({
+                node,
+                messageId: "enforceCustomScroll",
+              });
+            }
+          },
+        };
+      },
+    },
   },
 };

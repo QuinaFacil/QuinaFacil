@@ -3,18 +3,20 @@
 import React from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Section } from '@/components/ui/Section';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Box } from '@/components/ui/Box';
+import { AlertModal } from '@/components/ui/AlertModal';
 import { Flex } from '@/components/ui/Flex';
 import { Grid } from '@/components/ui/Grid';
 import { StatCard } from '@/components/ui/StatCard';
 import { Text } from '@/components/ui/Text';
 import { Stack } from '@/components/ui/Stack';
-import { Button } from '@/components/ui/Button';
 import { DrawTimer } from '@/components/ui/DrawTimer';
 import { ListRow } from '@/components/ui/ListRow';
 import { Badge } from '@/components/ui/Badge';
 import { useQuery } from '@tanstack/react-query';
 import { getSellerDashboardStatsAction, getSellerRecentActivityAction } from './actions';
+import { getCurrentUserProfileAction } from '@/app/(dashboard)/actions';
 import { Heading } from '@/components/ui/Heading';
 import { 
   DollarSign, 
@@ -25,7 +27,8 @@ import {
   Search,
   ArrowRight,
   Loader2,
-  Clock
+  Clock,
+  Copy
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -38,12 +41,30 @@ interface ActivityTicket {
 }
 
 export default function VendedorDashboardPage() {
-  // 1. Busca estatísticas do vendedor
+  const [alertConfig, setAlertConfig] = React.useState({ 
+    isOpen: false, 
+    title: '', 
+    message: '', 
+    variant: 'info' as 'info' | 'success' | 'error' | 'warning' 
+  });
+
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ['seller-stats'],
     queryFn: () => getSellerDashboardStatsAction(),
     refetchInterval: 10000 // 10s
   });
+
+  const { data: profile } = useQuery({
+    queryKey: ['current-user-profile'],
+    queryFn: () => getCurrentUserProfileAction()
+  });
+
+  const copySalesLink = () => {
+    if (!profile?.id) return;
+    const url = `${window.location.origin}/venda/${profile.id}`;
+    navigator.clipboard.writeText(url);
+    setAlertConfig({ isOpen: true, title: 'Link Copiado', message: 'Link de venda copiado para a área de transferência!', variant: 'success' });
+  };
 
   // 2. Busca atividade recente
   const { data: activity } = useQuery({
@@ -64,13 +85,7 @@ export default function VendedorDashboardPage() {
       <PageHeader
         title="Dashboard Vendedor"
         description="Acompanhe suas vendas e gerencie suas comissões em tempo real."
-      >
-        <Link href="/vendedor/emitir" className="no-underline">
-          <Button variant="primary" icon={Plus} className="hidden md:flex">
-            Novo Bilhete
-          </Button>
-        </Link>
-      </PageHeader>
+      />
 
       {/* Seção 01: Pulse da Operação */}
       <Section num="01" title="Pulse da Operação">
@@ -81,16 +96,15 @@ export default function VendedorDashboardPage() {
               progress={stats.contestProgress}
               endTime={stats.endTime}
               label="Tempo para Sorteio"
-              statusText={`Concurso #${stats.activeContest.concurso_numero}`}
+              statusText={`Campanha #${stats.activeContest.concurso_numero}`}
               className="h-full"
             />
           ) : (
-            <Flex align="center" justify="center" bg="glass" border="glass" padding={8} className="min-h-[160px]">
-              <Stack gap={2} align="center">
-                <Clock size={32} className="text-white/10" />
-                <Text variant="description" color="muted">Nenhum concurso ativo</Text>
-              </Stack>
-            </Flex>
+            <EmptyState 
+              icon={Clock} 
+              description="Nenhuma campanha ativa no momento." 
+              minHeight={160}
+            />
           )}
 
           <StatCard
@@ -106,7 +120,7 @@ export default function VendedorDashboardPage() {
 
       {/* Seção 02: Performance Financeira */}
       <Section num="02" title="Ganhos e Performance">
-        <Grid cols={3} gap={6}>
+        <Grid cols={4} gap={6}>
           <StatCard
             label="Comissões Disponíveis"
             value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats?.availableBalance || 0)}
@@ -120,6 +134,13 @@ export default function VendedorDashboardPage() {
             sub="Volume de hoje"
             icon={Ticket}
             bg="glass"
+          />
+          <StatCard
+            label="Tickets Pendentes"
+            value={stats?.pendingTicketsCount || 0}
+            sub="Aguardando Validação"
+            icon={Clock}
+            bg={stats?.pendingTicketsCount && stats.pendingTicketsCount > 0 ? "warning" : "muted"}
           />
           <StatCard
             label="Ticket Médio"
@@ -147,17 +168,19 @@ export default function VendedorDashboardPage() {
                       amount={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ticket.amount)}
                       time={new Date(ticket.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       icon={Ticket}
-                      variant={ticket.status === 'confirmed' ? 'success' : 'info'}
+                      variant={ticket.status === 'confirmed' ? 'success' : ticket.status === 'placeholder' ? 'warning' : 'info'}
                     >
-                      <Badge variant={ticket.status === 'confirmed' ? 'success' : 'info'}>
-                        {ticket.status === 'confirmed' ? 'Confirmado' : ticket.status}
+                      <Badge variant={ticket.status === 'confirmed' ? 'success' : ticket.status === 'placeholder' ? 'warning' : 'info'}>
+                        {ticket.status === 'confirmed' ? 'Confirmado' : ticket.status === 'placeholder' ? 'Não Validado' : ticket.status}
                       </Badge>
                     </ListRow>
                   ))
                 ) : (
-                  <Box padding={12} className="text-center opacity-20">
-                    <Text variant="description">Nenhuma venda realizada recentemente.</Text>
-                  </Box>
+                  <EmptyState 
+                    icon={Ticket} 
+                    description="Nenhuma venda realizada recentemente." 
+                    minHeight={160}
+                  />
                 )}
               </Stack>
             </Box>
@@ -168,14 +191,48 @@ export default function VendedorDashboardPage() {
         <Box className="col-span-12 lg:col-span-4">
           <Section num="04" title="Central de Ações">
             <Stack gap={4}>
-              <Link href="/vendedor/emitir" className="no-underline group">
-                <Box padding={6} bg="glass" border="glass" className="hover:border-primary-light/40 transition-all border-l-4 border-l-primary-light">
+              {stats?.activeContest && (
+                <>
+                  <Link href="/vendedor/emitir" className="no-underline group">
+                    <Box padding={6} bg="glass" border="glass" className="hover:border-primary-light/40 transition-all border-l-4 border-l-primary-light">
+                      <Flex justify="between" align="center">
+                        <Stack gap={1}>
+                          <Heading level={4} size="base">NOVO BILHETE</Heading>
+                          <Text variant="tiny" color="muted">Emitir aposta para a campanha atual</Text>
+                        </Stack>
+                        <Plus size={24} className="text-primary-light group-hover:rotate-90 transition-transform" />
+                      </Flex>
+                    </Box>
+                  </Link>
+
+                  <Box 
+                    padding={6} 
+                    bg="glass" 
+                    border="glass" 
+                    className="hover:border-primary-light/40 transition-all border-l-4 border-l-brand-success cursor-pointer group"
+                    onClick={copySalesLink}
+                  >
+                    <Flex justify="between" align="center">
+                      <Stack gap={1}>
+                        <Heading level={4} size="base">LINK DE VENDAS</Heading>
+                        <Text variant="tiny" color="muted">Copiar link para enviar ao cliente</Text>
+                      </Stack>
+                      <Copy size={24} className="text-brand-success group-hover:scale-110 transition-transform" />
+                    </Flex>
+                  </Box>
+                </>
+              )}
+
+              <Link href="/vendedor/tickets-pendentes" className="no-underline group">
+                <Box padding={5} bg="glass" border="glass" className={`hover:bg-white/5 transition-all border-l-4 ${stats?.pendingTicketsCount && stats.pendingTicketsCount > 0 ? 'border-l-warning' : 'border-l-transparent'}`}>
                   <Flex justify="between" align="center">
-                    <Stack gap={1}>
-                      <Heading level={4} size="base">NOVO BILHETE</Heading>
-                      <Text variant="tiny" color="muted">Emitir aposta para o concurso atual</Text>
-                    </Stack>
-                    <Plus size={24} className="text-primary-light group-hover:rotate-90 transition-transform" />
+                    <Flex gap={4} align="center">
+                      <Clock size={18} className={stats?.pendingTicketsCount && stats.pendingTicketsCount > 0 ? 'text-warning' : 'text-primary-light'} />
+                      <Text variant="label">Tickets Pendentes Link</Text>
+                    </Flex>
+                    <Badge variant={stats?.pendingTicketsCount && stats.pendingTicketsCount > 0 ? 'warning' : 'glass'}>
+                      {stats?.pendingTicketsCount || 0}
+                    </Badge>
                   </Flex>
                 </Box>
               </Link>
@@ -207,6 +264,14 @@ export default function VendedorDashboardPage() {
           </Section>
         </Box>
       </Grid>
+
+      <AlertModal
+        isOpen={alertConfig.isOpen}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        variant={alertConfig.variant}
+        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </>
   );
 }

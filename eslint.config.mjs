@@ -80,6 +80,12 @@ const eslintConfig = defineConfig([
       // Fonte: Arquitetura.md §REUSO TOTAL
       // -----------------------------------------------------------------------
       "quinafacil/enforce-ds-imports": "warn",
+
+      // -----------------------------------------------------------------------
+      // [CRITICAL] Proíbe o uso de popups nativos do navegador (alert, confirm, prompt).
+      // Use <AlertModal>, <ConfirmModal> ou Toasts do Design System.
+      // -----------------------------------------------------------------------
+      "quinafacil/no-browser-popup": "error",
     },
   },
 

@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getConcursosAction, deleteConcursoAction, processResultAction, type Concurso } from '@/app/(dashboard)/admin/concursos/actions';
+import { getConcursosAction, deleteConcursoAction, processResultAction } from '@/app/(dashboard)/admin/concursos/actions';
+import type { Concurso } from '@/types/lottery';
 import { ListRow } from '@/components/ui/ListRow';
 import { Box } from '@/components/ui/Box';
 import { Flex } from '@/components/ui/Flex';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Trophy, Edit2, Trash2, Play, Hash, Loader2, RefreshCcw } from 'lucide-react';
+import { EmptyState } from './EmptyState';
 
 interface ConcursoListProps {
   onEdit: (concurso: Concurso) => void;
@@ -65,13 +67,11 @@ export function ConcursoList({ onEdit, onLaunchResult }: ConcursoListProps) {
 
   if (!concursos || concursos.length === 0) {
     return (
-      <Flex direction="col" align="center" justify="center" padding={12} bg="glass" border="glass" className=" w-full border-dashed">
-        <Trophy size={48} className="text-primary-light/20" />
-        <Stack gap={1} className="text-center">
-          <Text variant="label">Nenhum concurso cadastrado</Text>
-          <Text variant="description">Clique em &quot;Novo Concurso&quot; para iniciar um sorteio.</Text>
-        </Stack>
-      </Flex>
+      <EmptyState 
+        icon={Trophy} 
+        description="Clique em 'Nova Campanha' para iniciar um sorteio." 
+        minHeight={300}
+      />
     );
   }
 
@@ -89,7 +89,7 @@ export function ConcursoList({ onEdit, onLaunchResult }: ConcursoListProps) {
             return (
               <ListRow
                 key={concurso.id}
-                title={`CONCURSO #${concurso.concurso_numero}`}
+                title={`CAMPANHA #${concurso.concurso_numero}`}
                 sub={statusConfig.label}
                 amount={concurso.draw_date ? new Date(concurso.draw_date).toLocaleDateString('pt-BR') : 'Sem data'}
                 time={concurso.status === 'finished' ? 'FINALIZADO' : 'PENDENTE'}
@@ -129,8 +129,8 @@ export function ConcursoList({ onEdit, onLaunchResult }: ConcursoListProps) {
                           onClick={() => {
                             setConfirmModal({
                               isOpen: true,
-                              title: 'Excluir Concurso',
-                              message: 'Deseja realmente excluir este concurso? Esta ação não pode ser desfeita.',
+                              title: 'Excluir Campanha',
+                              message: 'Deseja realmente excluir esta campanha? Esta ação não pode ser desfeita.',
                               variant: 'danger',
                               onConfirm: () => deleteMutation.mutate(concurso.id)
                             });
@@ -147,7 +147,7 @@ export function ConcursoList({ onEdit, onLaunchResult }: ConcursoListProps) {
                             setConfirmModal({
                               isOpen: true,
                               title: 'Re-processar Resultados',
-                              message: 'Deseja re-processar os resultados deste concurso? Isso recalculará os ganhadores com base na nova lógica.',
+                              message: 'Deseja re-processar os resultados desta campanha? Isso recalculará os ganhadores com base na nova lógica.',
                               variant: 'primary',
                               onConfirm: () => processMutation.mutate(concurso.id)
                             });
@@ -161,8 +161,8 @@ export function ConcursoList({ onEdit, onLaunchResult }: ConcursoListProps) {
                           onClick={() => {
                             setConfirmModal({
                               isOpen: true,
-                              title: 'Excluir Concurso',
-                              message: 'Deseja realmente excluir este concurso finalizado? Isso removerá o histórico do sorteio.',
+                              title: 'Excluir Campanha',
+                              message: 'Deseja realmente excluir esta campanha finalizada? Isso removerá o histórico do sorteio.',
                               variant: 'danger',
                               onConfirm: () => deleteMutation.mutate(concurso.id)
                             });

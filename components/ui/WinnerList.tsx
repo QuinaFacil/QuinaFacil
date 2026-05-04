@@ -9,6 +9,7 @@ import { Heading } from '@/components/ui/Heading';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
 import { Trophy, CheckCircle, Phone, User, Loader2, DollarSign } from 'lucide-react';
+import { EmptyState } from './EmptyState';
 import { markWinnerAsPaidAction } from '@/app/(dashboard)/admin/vencedores/actions';
 
 interface Winner {
@@ -63,15 +64,11 @@ export function WinnerList({ concursoId, winners, isLoading, onRefresh }: Winner
 
   if (!concursoId) {
     return (
-      <Flex direction="col" align="center" justify="center" padding={12} bg="glass" border="glass" className="w-full border-dashed min-h-[300px]">
-        <Stack gap={4} align="center">
-          <Trophy size={48} className="text-primary-light opacity-20" />
-          <Stack gap={1} align="center">
-            <Text variant="label" color="muted">Aguardando Seleção</Text>
-            <Text variant="description" color="muted">Selecione um concurso acima para visualizar os ganhadores e resultados.</Text>
-          </Stack>
-        </Stack>
-      </Flex>
+      <EmptyState 
+        icon={Trophy} 
+        description="Selecione uma campanha acima para visualizar os ganhadores e resultados." 
+        minHeight={300}
+      />
     );
   }
 
@@ -88,19 +85,11 @@ export function WinnerList({ concursoId, winners, isLoading, onRefresh }: Winner
 
   if (!winners || winners.length === 0) {
     return (
-      <Flex direction="col" align="center" justify="center" padding={12} bg="glass" border="glass" className="w-full border-dashed min-h-[300px] border-primary-light/20">
-        <Stack gap={5} align="center">
-          <Flex align="center" justify="center" bg="glass" padding={6} rounded="none" className="w-20 h-20 rounded-full border border-primary-light/10">
-            <Trophy size={40} className="text-primary-light/40" />
-          </Flex>
-          <Stack gap={2} align="center">
-            <Heading level={4} size="lg" color="primary">CONCURSO ACUMULADO!</Heading>
-            <Text variant="description" color="muted" className="max-w-[280px] text-center">
-              Não houve bilhetes premiados para este sorteio. O prêmio será acumulado para o próximo concurso.
-            </Text>
-          </Stack>
-        </Stack>
-      </Flex>
+      <EmptyState 
+        icon={Trophy} 
+        description="Não houve bilhetes premiados para este sorteio. O prêmio será acumulado para a próxima campanha." 
+        minHeight={300}
+      />
     );
   }
 

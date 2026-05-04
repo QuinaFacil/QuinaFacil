@@ -44,7 +44,7 @@ export default function AdminVencedoresPage() {
 
       <Section
         num="01"
-        title="Selecione um Concurso"
+        title="Selecione uma Campanha"
       >
         {loadingConcursos ? (
           <Flex align="center" justify="center" padding={6} className="h-24">
@@ -71,7 +71,7 @@ export default function AdminVencedoresPage() {
                 {/* Título/Info */}
                 <Stack gap={1} align="center" className="md:items-start text-center md:text-left">
                   <Text variant="label" color="primary">NÚMEROS OFICIAIS</Text>
-                  <Text variant="description" color="muted">Sorteio do Concurso #{selectedConcurso.concurso_numero}</Text>
+                  <Text variant="description" color="muted">Sorteio da Campanha #{selectedConcurso.concurso_numero}</Text>
                 </Stack>
 
                 {/* Dezenas */}

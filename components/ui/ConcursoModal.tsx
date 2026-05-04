@@ -11,8 +11,10 @@ import { NumberPicker } from '@/components/ui/NumberPicker';
 import { Box } from '@/components/ui/Box';
 import { Text } from '@/components/ui/Text';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { saveConcursoAction, type Concurso } from '@/app/(dashboard)/admin/concursos/actions';
-import { Calendar, Hash, DollarSign } from 'lucide-react';
+import { saveConcursoAction, uploadContestBannerAction } from '@/app/(dashboard)/admin/concursos/actions';
+import type { Concurso } from '@/types/lottery';
+import { Calendar, Hash, DollarSign, FileText } from 'lucide-react';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 
 interface ConcursoModalProps {
   isOpen: boolean;
@@ -25,34 +27,71 @@ interface ConcursoModalProps {
  */
 function ConcursoForm({ 
   selectedConcurso, 
-  onSuccess 
+  onSuccess,
+  setLoading
 }: { 
   selectedConcurso?: Concurso | null; 
   onSuccess: () => void;
+  setLoading: (val: boolean) => void;
 }) {
   const [formData, setFormData] = React.useState({
     concurso_numero: selectedConcurso?.concurso_numero?.toString() || '',
     draw_date: selectedConcurso?.draw_date ? new Date(selectedConcurso.draw_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     status: selectedConcurso?.status || 'open' as 'open' | 'closed' | 'finished',
     numeros: selectedConcurso?.numeros || [] as number[],
-    prize_amount: selectedConcurso?.prize_amount?.toString() || '0'
+    description: selectedConcurso?.description || '',
+    prize_amount: selectedConcurso?.prize_amount 
+      ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(selectedConcurso.prize_amount) 
+      : '0,00',
+    banner_url: selectedConcurso?.banner_url || ''
   });
+
+  const maskCurrency = (value: string) => {
+    const cleanValue = value.replace(/\D/g, "");
+    if (!cleanValue) return "0,00";
+    const numberValue = parseInt(cleanValue) / 100;
+    return new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(numberValue);
+  };
+
+  const parseCurrency = (value: string) => {
+    return parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0;
+  };
+  const [bannerFile, setBannerFile] = React.useState<File | null>(null);
 
   const mutation = useMutation({
     mutationFn: (data: Partial<Concurso>) => saveConcursoAction(data),
     onSuccess
   });
 
-  const handleSubmit = (e?: React.FormEvent) => {
+    const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    mutation.mutate({
-      id: selectedConcurso?.id,
-      concurso_numero: parseInt(formData.concurso_numero),
-      draw_date: formData.draw_date,
-      status: formData.status,
-      prize_amount: parseFloat(formData.prize_amount),
-      numeros: formData.numeros.length === 5 ? formData.numeros : null
-    });
+    setLoading(true);
+    
+    try {
+      let finalBannerUrl = formData.banner_url;
+      
+      if (bannerFile) {
+        finalBannerUrl = await uploadContestBannerAction(parseInt(formData.concurso_numero), bannerFile);
+      }
+
+      await mutation.mutateAsync({
+        id: selectedConcurso?.id,
+        concurso_numero: parseInt(formData.concurso_numero),
+        draw_date: formData.draw_date,
+        status: formData.status,
+        prize_amount: parseCurrency(formData.prize_amount),
+        description: formData.description,
+        banner_url: finalBannerUrl,
+        numeros: formData.numeros.length === 5 ? formData.numeros : null
+      });
+    } catch (err) {
+      console.error("Error saving contest:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isCreating = !selectedConcurso;
@@ -62,7 +101,7 @@ function ConcursoForm({
       <Stack as="form" onSubmit={handleSubmit} gap={5}>
         <Grid cols={2} gap={5}>
           <InputField
-            label="Número do Concurso"
+            label="Número da Campanha"
             type="number"
             icon={Hash}
             value={formData.concurso_numero}
@@ -81,20 +120,36 @@ function ConcursoForm({
         </Grid>
 
         <InputField
-          label="Valor do Prêmio (R$)"
-          type="number"
-          step="0.01"
+          label="Valor do Prêmio"
+          type="text"
           icon={DollarSign}
           value={formData.prize_amount}
-          onChange={(e) => setFormData({ ...formData, prize_amount: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, prize_amount: maskCurrency(e.target.value) })}
           required
-          placeholder="Ex: 5000.00"
+          placeholder="0,00"
+        />
+
+        <InputField
+          label="Descrição da Campanha"
+          as="textarea"
+          icon={FileText}
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          placeholder="Descreva as regras ou detalhes deste sorteio..."
+          className="min-h-[100px]"
+        />
+
+        <ImageUpload
+          label="Banner da Campanha"
+          value={formData.banner_url}
+          onChange={setBannerFile}
+          hint="FORMATO RECOMENDADO: 1200x400 (3:1)"
         />
 
         {!isCreating && (
           <Stack gap={5}>
             <CustomSelect
-              label="Status do Concurso"
+              label="Status da Campanha"
               options={[
                 { value: 'open', label: 'Vendas Abertas' },
                 { value: 'closed', label: 'Vendas Encerradas' },
@@ -118,7 +173,7 @@ function ConcursoForm({
         {isCreating && (
           <Box padding={4} bg="glass" border="glass" className="border-primary-light/20">
             <Text variant="description" color="muted" className="text-center">
-              Ao abrir este concurso, ele ficará disponível imediatamente para venda por todos os vendedores ativos.
+              Ao abrir esta campanha, ela ficará disponível imediatamente para venda por todos os vendedores ativos.
             </Text>
           </Box>
         )}
@@ -131,6 +186,7 @@ function ConcursoForm({
 
 export function ConcursoModal({ isOpen, onClose, selectedConcurso }: ConcursoModalProps) {
   const queryClient = useQueryClient();
+  const [loading, setLoading] = React.useState(false);
 
   const handleSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['concursos'] });
@@ -143,19 +199,20 @@ export function ConcursoModal({ isOpen, onClose, selectedConcurso }: ConcursoMod
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isCreating ? 'Novo Concurso' : `Gerenciar Concurso #${selectedConcurso?.concurso_numero}`}
+      title={isCreating ? 'Nova Campanha' : `Gerenciar Campanha #${selectedConcurso?.concurso_numero}`}
       footer={
         <Stack direction="row" gap={3} className="w-full">
-          <Button variant="glass" onClick={onClose} fullWidth>Cancelar</Button>
+          <Button variant="glass" onClick={onClose} fullWidth disabled={loading}>Cancelar</Button>
           <Button
             variant="primary"
+            loading={loading}
             onClick={() => {
               const trigger = document.getElementById('modal-footer-trigger');
               if (trigger) trigger.click();
             }}
             fullWidth
           >
-            {isCreating ? 'Abrir Concurso' : 'Salvar'}
+            {isCreating ? 'Abrir Campanha' : 'Salvar'}
           </Button>
         </Stack>
       }
@@ -164,6 +221,7 @@ export function ConcursoModal({ isOpen, onClose, selectedConcurso }: ConcursoMod
         <ConcursoForm 
           selectedConcurso={selectedConcurso} 
           onSuccess={handleSuccess}
+          setLoading={setLoading}
         />
       )}
     </Modal>
