@@ -105,7 +105,7 @@ export default function TicketsPendentesPage() {
             <Flex gap={4} align="center">
               <AlertTriangle className="text-warning" size={32} />
               <Text variant="description" color="muted">
-                Estes bilhetes foram criados por clientes através do seu link. Eles <Text as="span" color="warning" weight="bold">NÃO CONCORREM</Text> até que você clique em validar.
+                Estes bilhetes foram criados por clientes através do seu link. Eles <Text as="span" color="warning" weight="bold" size="sm">NÃO CONCORREM</Text> até que você clique em validar.
               </Text>
             </Flex>
           </Box>

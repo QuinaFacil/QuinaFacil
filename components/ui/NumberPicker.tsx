@@ -76,7 +76,7 @@ export function NumberPicker({
 
         <Stack gap={3}>
           <Box className="ui-divider-line" />
-          <Flex justify="between" align="center">
+          <Flex direction="col" gap={4} className="md:flex-row md:justify-between md:items-center">
             <Text
               variant="tiny"
               className="opacity-60 uppercase italic font-black tracking-widest"
@@ -85,8 +85,9 @@ export function NumberPicker({
               type="button"
               variant="danger"
               size="sm"
+              fullWidth
               onClick={() => { onSelectionChange?.([]); }}
-              className="text-error"
+              className="text-error md:w-auto"
             >
               Limpar
             </Button>

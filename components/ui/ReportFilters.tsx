@@ -58,11 +58,11 @@ export function ReportFilters({ options, onFilter, variant = 'manager' }: Report
   const isAdmin = variant === 'admin';
 
   return (
-    <Box padding={6} bg="glass" border="glass" className="border-primary-light/10">
+    <Box padding={6} bg="glass" border="glass" className="border-primary-light/10 overflow-hidden">
       <Stack gap={6}>
         {/* Row 1: Período e Atalhos */}
         <Stack gap={6} className="lg:flex-row lg:items-end">
-          <Flex direction="col" gap={4} className="flex-1 md:flex-row">
+          <Flex direction="col" gap={4} className="flex-1 md:flex-row min-w-0 w-full">
             <InputField
               label="Data Inicial"
               type="date"

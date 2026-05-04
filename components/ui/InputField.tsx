@@ -28,7 +28,7 @@ export const InputField = React.forwardRef<HTMLInputElement | HTMLTextAreaElemen
   const inputType = isPassword ? (showPassword ? 'text' : 'password') : props.type;
 
   return (
-    <Flex direction="col" gap={2} className={`w-full ${className}`}>
+    <Flex direction="col" gap={2} className={`w-full min-w-0 ${className}`}>
       {label && <Text variant="label" color="primary" className=" uppercase italic font-black tracking-widest">{label}</Text>}
       <Box padding={0} className="relative group">
         {Icon && (
