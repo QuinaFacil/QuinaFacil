@@ -23,7 +23,7 @@ export default function GerentePerfilPage() {
     isOpen: false, 
     title: '', 
     message: '', 
-    variant: 'info' as 'info' | 'success' | 'error' | 'warning' 
+    variant: 'info' as 'info' | 'success' | 'error' 
   });
 
   const { data: profile, isLoading } = useQuery({

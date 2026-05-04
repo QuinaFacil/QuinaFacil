@@ -45,7 +45,7 @@ export default function VendedorDashboardPage() {
     isOpen: false, 
     title: '', 
     message: '', 
-    variant: 'info' as 'info' | 'success' | 'error' | 'warning' 
+    variant: 'info' as 'info' | 'success' | 'error' 
   });
 
   const { data: stats, isLoading: loadingStats } = useQuery({

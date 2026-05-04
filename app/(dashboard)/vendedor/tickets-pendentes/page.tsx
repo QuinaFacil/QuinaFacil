@@ -34,7 +34,7 @@ export default function TicketsPendentesPage() {
     isOpen: false, 
     title: '', 
     message: '', 
-    variant: 'info' as 'info' | 'success' | 'error' | 'warning' 
+    variant: 'info' as 'info' | 'success' | 'error' 
   });
   const [deleteConfirm, setDeleteConfirm] = React.useState({ isOpen: false, ticketId: '' });
 
