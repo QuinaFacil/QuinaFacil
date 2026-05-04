@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Trophy } from 'lucide-react';
 import { ConcursoList } from '@/components/ui/ConcursoList';
 import { ConcursoModal } from '@/components/ui/ConcursoModal';
-import { type Concurso } from './actions';
+import type { Concurso } from '@/types/lottery';
 
 export default function AdminConcursosPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
