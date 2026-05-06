@@ -171,7 +171,7 @@ export function SalesScheduleModal({ isOpen, onClose }: SalesScheduleModalProps)
         {message && (
           <Flex align="center" gap={2} className={`${message.type === 'success' ? 'text-success' : 'text-error'} justify-center`}>
             {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-            <Text variant="tiny" color="inherit">{message.text}</Text>
+            <Text variant="tiny">{message.text}</Text>
           </Flex>
         )}
       </Stack>

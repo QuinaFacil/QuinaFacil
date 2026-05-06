@@ -125,8 +125,7 @@ export default function VendedorDashboardPage() {
               : "Nenhuma campanha ativa"
             }
             icon={TrendingUp}
-            variant={stats?.goalStats?.isPaid ? 'success' : 'neutral'}
-            bg="glass"
+            bg={stats?.goalStats?.isPaid ? 'success' : 'muted'}
           />
         </Grid>
       </Section>

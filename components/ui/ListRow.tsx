@@ -11,7 +11,7 @@ import { Heading } from './Heading';
 import Image from 'next/image';
 
 interface ListRowProps {
-  title: string;
+  title: React.ReactNode;
   sub: React.ReactNode;
   amount: string;
   time: string;
@@ -62,7 +62,7 @@ export function ListRow({
                 'border-white/10 text-white/40 shadow-none'}`}
           >
             {image ? (
-              <Image src={image} alt={title} fill className="object-cover" />
+              <Image src={image} alt={typeof title === 'string' ? title : ''} fill className="object-cover" />
             ) : Icon ? (
               <Icon size={18} />
             ) : (
