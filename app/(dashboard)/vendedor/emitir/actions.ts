@@ -11,6 +11,8 @@ export interface Contest {
   banner_url?: string;
   description?: string;
   prize_amount?: number;
+  ticket_goal?: number;
+  city_id?: string;
   created_at: string;
 }
 
