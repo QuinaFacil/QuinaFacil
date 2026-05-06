@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/Button';
 import { NumberPicker } from '@/components/ui/NumberPicker';
 import { Box } from '@/components/ui/Box';
 import { Text } from '@/components/ui/Text';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { saveConcursoAction, uploadContestBannerAction } from '@/app/(dashboard)/admin/concursos/actions';
+import { saveConcursoAction, uploadContestBannerAction, getCitiesListAction } from '@/app/(dashboard)/admin/concursos/actions';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Concurso } from '@/types/lottery';
 import { Calendar, Hash, DollarSign, FileText } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/ImageUpload';
@@ -43,8 +43,18 @@ function ConcursoForm({
     prize_amount: selectedConcurso?.prize_amount 
       ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(selectedConcurso.prize_amount) 
       : '0,00',
-    banner_url: selectedConcurso?.banner_url || ''
+    banner_url: selectedConcurso?.banner_url || '',
+    city_id: selectedConcurso?.city_id || '',
+    ticket_goal: selectedConcurso?.ticket_goal?.toString() || '0',
+    goal_indicator_active: true
   });
+
+  const { data: cities } = useQuery({
+    queryKey: ['cities-list'],
+    queryFn: () => getCitiesListAction()
+  });
+
+  const cityOptions = (cities?.map(c => ({ value: c.id, label: c.name })) || []);
 
   const maskCurrency = (value: string) => {
     const cleanValue = value.replace(/\D/g, "");
@@ -61,14 +71,12 @@ function ConcursoForm({
   };
   const [bannerFile, setBannerFile] = React.useState<File | null>(null);
 
-  const mutation = useMutation({
-    mutationFn: (data: Partial<Concurso>) => saveConcursoAction(data),
-    onSuccess
-  });
+  const [formError, setFormError] = React.useState<string | null>(null);
 
-    const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
+    setFormError(null);
     
     try {
       let finalBannerUrl = formData.banner_url;
@@ -77,7 +85,13 @@ function ConcursoForm({
         finalBannerUrl = await uploadContestBannerAction(parseInt(formData.concurso_numero), bannerFile);
       }
 
-      await mutation.mutateAsync({
+      if (!formData.city_id) {
+        setFormError("É obrigatório selecionar uma cidade para a campanha.");
+        setLoading(false);
+        return;
+      }
+
+      const res = await saveConcursoAction({
         id: selectedConcurso?.id,
         concurso_numero: parseInt(formData.concurso_numero),
         draw_date: formData.draw_date,
@@ -85,81 +99,129 @@ function ConcursoForm({
         prize_amount: parseCurrency(formData.prize_amount),
         description: formData.description,
         banner_url: finalBannerUrl,
+        city_id: formData.city_id,
+        ticket_goal: parseCurrency(formData.ticket_goal),
+        goal_indicator_active: true,
         numeros: formData.numeros.length === 5 ? formData.numeros : null
       });
-    } catch (err) {
+
+      if (res.success) {
+        onSuccess();
+      } else {
+        setFormError(res.error || "Erro ao salvar.");
+      }
+    } catch (err: unknown) {
       console.error("Error saving contest:", err);
+      setFormError(err instanceof Error ? err.message : "Erro inesperado.");
     } finally {
       setLoading(false);
     }
   };
 
   const isCreating = !selectedConcurso;
+  const isLaunchingResult = formData.status === 'finished' && !isCreating;
 
   return (
     <>
       <Stack as="form" onSubmit={handleSubmit} gap={5}>
-        <Grid cols={2} gap={5}>
-          <InputField
-            label="Número da Campanha"
-            type="number"
-            icon={Hash}
-            value={formData.concurso_numero}
-            onChange={(e) => setFormData({ ...formData, concurso_numero: e.target.value })}
-            required
-            disabled={!isCreating}
-          />
-          <InputField
-            label="Data do Sorteio"
-            type="date"
-            icon={Calendar}
-            value={formData.draw_date}
-            onChange={(e) => setFormData({ ...formData, draw_date: e.target.value })}
-            required
-          />
-        </Grid>
+        {formError && (
+          <Box padding={4} bg="glass" border="glass" className="border-red-500/50 bg-red-500/10">
+            <Text variant="tiny" className="text-red-400 text-center font-medium">
+              {formError}
+            </Text>
+          </Box>
+        )}
 
-        <InputField
-          label="Valor do Prêmio"
-          type="text"
-          icon={DollarSign}
-          value={formData.prize_amount}
-          onChange={(e) => setFormData({ ...formData, prize_amount: maskCurrency(e.target.value) })}
-          required
-          placeholder="0,00"
-        />
+        {!isLaunchingResult ? (
+          <>
+            <Grid cols={2} gap={5}>
+              <InputField
+                label="Número da Campanha"
+                type="text"
+                icon={Hash}
+                value={formData.concurso_numero}
+                onChange={(e) => setFormData({ ...formData, concurso_numero: e.target.value })}
+                required
+                disabled={!isCreating}
+              />
+              <InputField
+                label="Data do Sorteio"
+                type="date"
+                icon={Calendar}
+                value={formData.draw_date}
+                onChange={(e) => setFormData({ ...formData, draw_date: e.target.value })}
+                required
+              />
+            </Grid>
 
-        <InputField
-          label="Descrição da Campanha"
-          as="textarea"
-          icon={FileText}
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Descreva as regras ou detalhes deste sorteio..."
-          className="min-h-[100px]"
-        />
+            <InputField
+              label="Valor do Prêmio"
+              type="text"
+              icon={DollarSign}
+              value={formData.prize_amount}
+              onChange={(e) => setFormData({ ...formData, prize_amount: maskCurrency(e.target.value) })}
+              required
+              placeholder="0,00"
+            />
 
-        <ImageUpload
-          label="Banner da Campanha"
-          value={formData.banner_url}
-          onChange={setBannerFile}
-          hint="FORMATO RECOMENDADO: 1200x400 (3:1)"
-        />
+            <InputField
+              label="Descrição da Campanha"
+              icon={FileText}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Descreva as regras ou detalhes deste sorteio..."
+            />
+
+            <CustomSelect
+              label="Cidade Abrangente"
+              options={cityOptions}
+              value={formData.city_id}
+              onChange={(val) => setFormData({ ...formData, city_id: val })}
+            />
+            <InputField
+              label="Meta de Vendas"
+              type="text"
+              icon={DollarSign}
+              value={formData.ticket_goal}
+              onChange={(e) => setFormData({ ...formData, ticket_goal: maskCurrency(e.target.value) })}
+              placeholder="0,00"
+            />
+
+            <ImageUpload
+              label="Banner da Campanha"
+              value={formData.banner_url}
+              onChange={setBannerFile}
+              hint="FORMATO RECOMENDADO: 1200x400 (3:1)"
+            />
+          </>
+        ) : (
+          <Box padding={4} bg="glass" border="glass" className="border-primary-light/10">
+            <Stack gap={2}>
+              <Text variant="label" color="primary">LANÇAMENTO DE RESULTADO</Text>
+              <Text variant="description" color="muted">
+                Insira as 5 dezenas oficiais para o concurso #{formData.concurso_numero}. 
+                Esta ação irá disparar o processamento automático de ganhadores.
+              </Text>
+            </Stack>
+          </Box>
+        )}
 
         {!isCreating && (
           <Stack gap={5}>
-            <CustomSelect
-              label="Status da Campanha"
-              options={[
-                { value: 'open', label: 'Vendas Abertas' },
-                { value: 'closed', label: 'Vendas Encerradas' },
-                { value: 'finished', label: 'Sorteio Finalizado (Lançar Dezenas)' }
-              ]}
-              value={formData.status}
-              onChange={(val) => setFormData({ ...formData, status: val as 'open' | 'closed' | 'finished' })}
-            />
+            {!isLaunchingResult && (
+              <CustomSelect
+                label="Status da Campanha"
+                options={[
+                  { value: 'open', label: 'Vendas Abertas' },
+                  { value: 'closed', label: 'Vendas Encerradas' },
+                  { value: 'finished', label: 'Sorteio Finalizado (Lançar Dezenas)' }
+                ]}
+                value={formData.status}
+                onChange={(val) => setFormData({ ...formData, status: val as 'open' | 'closed' | 'finished' })}
+              />
+            )}
 
-            {(formData.status === 'finished' || (selectedConcurso?.numeros)) && (
+            {(isLaunchingResult || formData.status === 'finished' || (selectedConcurso?.numeros)) && (
               <NumberPicker
                 label="Números Sorteados"
                 subLabel="Selecione as 5 dezenas oficiais para processar ganhadores"

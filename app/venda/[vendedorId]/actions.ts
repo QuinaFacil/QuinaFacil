@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 
@@ -8,10 +7,10 @@ import { createAdminClient } from "@/utils/supabase/admin";
  * Busca o vendedor pelo ID para validar o link
  */
 export async function getSellerInfoAction(vendedorId: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('profiles')
-    .select('name, city')
+    .select('name, city, city_id')
     .eq('id', vendedorId)
     .eq('role', 'vendedor')
     .eq('active', true)
@@ -22,20 +21,65 @@ export async function getSellerInfoAction(vendedorId: string) {
 }
 
 /**
- * Busca o concurso ativo
+ * Busca o concurso ativo filtrado pela cidade do vendedor
  */
-export async function getActiveContestAction() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('concursos')
-    .select('id, concurso_numero')
-    .eq('status', 'open')
-    .order('concurso_numero', { ascending: false })
-    .limit(1)
+export async function getActiveContestAction(vendedorId: string) {
+  const supabase = createAdminClient();
+
+  // 1. Busca a cidade do vendedor
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('city_id')
+    .eq('id', vendedorId)
     .single();
 
-  if (error) return null;
-  return data;
+  if (!profile?.city_id) return null;
+
+  // 2. Busca concurso aberto para esta cidade e configurações de horário
+  const [{ data: contest }, { data: settings }] = await Promise.all([
+    supabase.from('concursos')
+      .select(`
+        id, 
+        concurso_numero, 
+        banner_url, 
+        description,
+        city:cities (name)
+      `)
+      .eq('status', 'open')
+      .eq('city_id', profile.city_id)
+      .order('draw_date', { ascending: true, nullsFirst: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase.from('system_settings').select('key, value').eq('key', 'sales_schedule').maybeSingle()
+  ]);
+
+  let schedule = { openTime: '06:00', closeTime: '17:00', activeDays: [1,2,3,4,5,6] };
+  if (settings && 'value' in settings && settings.value) {
+    try {
+      schedule = JSON.parse(settings.value as string);
+    } catch (e) {
+      console.error("Error parsing sales_schedule in public page:", e);
+    }
+  }
+
+  interface ContestWithCity {
+    id: string;
+    concurso_numero: number;
+    banner_url: string | null;
+    description: string | null;
+    city: { name: string } | null;
+  }
+
+  const contestData = contest as unknown as ContestWithCity | null;
+
+  return { 
+    id: contestData?.id,
+    concurso_numero: contestData?.concurso_numero,
+    banner_url: contestData?.banner_url || undefined,
+    description: contestData?.description || undefined,
+    cityName: contestData?.city?.name,
+    schedule 
+  };
 }
 
 /**

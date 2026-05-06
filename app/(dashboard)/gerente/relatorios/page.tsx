@@ -29,10 +29,15 @@ interface TicketWithVendedor {
 }
 
 export default function GerenteRelatoriosPage() {
-  const [activeFilters, setActiveFilters] = useState<ManagerReportFilters>({
-    dateStart: new Date().toISOString().split('T')[0],
-    dateEnd: new Date().toISOString().split('T')[0],
-    sellerId: 'all'
+  const [activeFilters, setActiveFilters] = useState<ManagerReportFilters>(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+    return {
+      dateStart: start.toISOString().split('T')[0],
+      dateEnd: end.toISOString().split('T')[0],
+      sellerId: 'all'
+    };
   });
 
   // 1. Busca opções dos filtros (Escopo Gerente)
@@ -84,7 +89,7 @@ export default function GerenteRelatoriosPage() {
           <StatCard
             label="Minha Comissão"
             value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats?.managerCommission || 0)}
-            sub="Seu lucro (5% do volume)"
+            sub="Seu lucro (25% do volume)"
             icon={Award}
             bg="success"
           />

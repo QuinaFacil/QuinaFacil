@@ -13,7 +13,7 @@ import { ImageUpload } from '@/components/ui/ImageUpload';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
 import { Heading } from '@/components/ui/Heading';
-import { Save, User, Mail, Phone, MapPin, Loader2 } from 'lucide-react';
+import { Save, User, Mail, Phone, MapPin, Loader2, Wallet } from 'lucide-react';
 import { AlertModal } from '@/components/ui/AlertModal';
 
 export default function GerentePerfilPage() {
@@ -155,14 +155,19 @@ export default function GerentePerfilPage() {
                   icon={MapPin}
                   required
                 />
-                <Box className="col-span-1 md:col-span-2">
-                  <InputField 
-                    label="Nova Senha (Opcional)" 
-                    name="password"
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                </Box>
+                <InputField
+                  label="Chave PIX"
+                  name="pix_key"
+                  defaultValue={profile?.pix_key || ''}
+                  placeholder="CPF, E-mail ou Celular"
+                  icon={Wallet}
+                />
+                <InputField 
+                  label="Nova Senha (Opcional)" 
+                  name="password"
+                  type="password"
+                  placeholder="Mínimo 6 caracteres"
+                />
               </Grid>
 
               <Flex justify="end">

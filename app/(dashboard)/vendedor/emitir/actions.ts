@@ -10,6 +10,7 @@ export interface Contest {
   status: string;
   banner_url?: string;
   description?: string;
+  prize_amount?: number;
   created_at: string;
 }
 
@@ -25,24 +26,88 @@ export interface TicketData {
   comprador_telefone?: string;
 }
 
+export interface EmissionConfig {
+  contest: Contest | null;
+  settings: { key: string; value: string }[];
+  sellerName: string;
+  goalStats: {
+    target: number;
+    currentNet: number;
+    percentage: number;
+    profit: number;
+    isPaid: boolean;
+  } | null;
+}
+
 /**
- * Busca o concurso atual com status 'open'
+ * Busca o concurso atual com status 'open' e as configurações do sistema
  */
-export async function getOpenContestAction(): Promise<Contest | null> {
+export async function getOpenContestAction(): Promise<EmissionConfig> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('concursos')
-    .select('*')
-    .eq('status', 'open')
-    .order('created_at', { ascending: false })
-    .limit(1)
+
+  // 1. Identifica a cidade do vendedor
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { contest: null, settings: [], sellerName: '', goalStats: null };
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('city_id, name')
+    .eq('id', user.id)
     .single();
 
-  if (error) {
-    console.error("[GET_CONCURSO_ERROR]:", error.message);
-    return null;
+  if (profileError || !profile?.city_id) {
+    console.error("[GET_OPEN_CONTEST] Profile error:", profileError);
+    return { contest: null, settings: [], sellerName: '', goalStats: null };
   }
-  return data as unknown as Contest;
+
+  // 2. Busca o concurso aberto para esta cidade e as configurações em paralelo
+  const [contestResponse, settingsResponse] = await Promise.all([
+    supabase
+      .from('concursos')
+      .select('*')
+      .eq('status', 'open')
+      .eq('city_id', profile.city_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single(),
+    supabase.from('system_settings').select('key, value')
+  ]);
+
+  if (contestResponse.error && contestResponse.error.code !== 'PGRST116') {
+    console.error("[GET_OPEN_CONTEST] Contest error:", contestResponse.error);
+  }
+
+  const contest = contestResponse.data as unknown as Contest;
+  let goalStats = null;
+
+  if (contest) {
+    const { data: contestTickets } = await supabase
+      .from('tickets')
+      .select('amount')
+      .eq('concurso_id', contest.id)
+      .eq('status', 'confirmed');
+
+    const grossSales = contestTickets?.reduce((acc, t) => acc + Number(t.amount), 0) || 0;
+    const netRevenue = grossSales * 0.55; 
+    const target = Number(contest.ticket_goal) || 0;
+    const profit = netRevenue - target;
+    const percentage = target > 0 ? (netRevenue / target) * 100 : 0;
+
+    goalStats = {
+      target,
+      currentNet: netRevenue,
+      percentage,
+      profit: Math.max(profit, 0),
+      isPaid: netRevenue >= target
+    };
+  }
+
+  return {
+    contest: contest as unknown as Contest || null,
+    settings: settingsResponse.data || [],
+    sellerName: profile.name || '',
+    goalStats
+  };
 }
 
 /**
@@ -58,20 +123,47 @@ export async function emitTicketAction(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Usuário não autenticado");
 
-  // 2. Busca o concurso aberto e configurações de horário
+  // 2. Busca o perfil (para city_id), concurso aberto e configurações de horário
+  const { data: profile } = await supabase.from('profiles').select('city_id').eq('id', user.id).single();
+  
+  if (!profile?.city_id) throw new Error("Vendedor não possui cidade vinculada.");
+
   const [{ data: contest }, { data: settings }] = await Promise.all([
-    supabase.from('concursos').select('id, concurso_numero').eq('status', 'open').single(),
+    supabase.from('concursos')
+      .select('id, concurso_numero')
+      .eq('status', 'open')
+      .eq('city_id', profile.city_id)
+      .single(),
     supabase.from('system_settings').select('key, value')
   ]);
 
-  const openingTime = settings?.find(s => s.key === 'opening_time')?.value || '06:00';
-  const closingTime = settings?.find(s => s.key === 'closing_time')?.value || '17:00';
-
   const now = new Date();
   const currentStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const dayOfWeek = now.getDay(); // 0-6 (Domingo-Sábado)
 
-  if (currentStr < openingTime || currentStr >= closingTime) {
-    throw new Error(`Vendas encerradas. Horário: ${openingTime} às ${closingTime}.`);
+  const scheduleJson = settings?.find(s => s.key === 'sales_schedule')?.value;
+  const schedule = scheduleJson ? JSON.parse(scheduleJson) : null;
+
+  if (schedule && schedule.activeDays) {
+    const isDayActive = schedule.activeDays.includes(dayOfWeek);
+    const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const currentDayName = dayNames[dayOfWeek];
+
+    if (!isDayActive) {
+      throw new Error(`Vendas encerradas hoje (${currentDayName}).`);
+    }
+
+    if (currentStr < schedule.openTime || currentStr >= schedule.closeTime) {
+      throw new Error(`Vendas encerradas. Horário: ${schedule.openTime} às ${schedule.closeTime}.`);
+    }
+  } else {
+    // Fallback para o sistema rudimentar antigo se o novo não estiver configurado
+    const openingTime = settings?.find(s => s.key === 'opening_time')?.value || '06:00';
+    const closingTime = settings?.find(s => s.key === 'closing_time')?.value || '17:00';
+
+    if (currentStr < openingTime || currentStr >= closingTime) {
+      throw new Error(`Vendas encerradas. Horário padrão: ${openingTime} às ${closingTime}.`);
+    }
   }
 
   if (!contest) throw new Error("Não há concursos abertos para apostas no momento.");

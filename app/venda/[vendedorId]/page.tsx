@@ -38,38 +38,66 @@ export default function VendaPublicaPage() {
   const vendedorId = params.vendedorId as string;
 
   const [seller, setSeller] = useState<{ name: string; city: string | null } | null>(null);
-  const [contest, setContest] = useState<{ id: string; concurso_numero: number } | null>(null);
+  const [contest, setContest] = useState<{ 
+    id?: string; 
+    concurso_numero?: number; 
+    banner_url?: string; 
+    description?: string;
+    cityName?: string;
+    schedule: { openTime: string; closeTime: string; activeDays: number[] }
+  } | null>(null);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [buyerInfo, setBuyerInfo] = useState({ nome: '', cpf: '', telefone: '' });
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'picker' | 'success'>('picker');
   const [lastTicket, setLastTicket] = useState<{ serial_number: string; numbers: number[] } | null>(null);
   const [isClosed, setIsClosed] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
+    if (!contest?.schedule) return;
+
     const checkTime = () => {
       const now = new Date();
-      const hour = now.getHours();
-      setIsClosed(hour >= 17 || hour < 6);
+      // Formato HH:mm manual para evitar problemas de locale
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const currentStr = `${hours}:${minutes}`;
+      
+      const dayOfWeek = now.getDay();
+      
+      const { openTime, closeTime, activeDays } = contest.schedule;
+      const isDayActive = activeDays.includes(dayOfWeek);
+      const isTimeActive = currentStr >= openTime && currentStr < closeTime;
+      
+      setIsClosed(!isDayActive || !isTimeActive);
     };
     
     checkTime();
-    const interval = setInterval(checkTime, 60000);
+    const interval = setInterval(checkTime, 10000); // Check more frequently
     return () => clearInterval(interval);
-  }, []);
+  }, [contest]);
 
   useEffect(() => {
     async function loadData() {
-      const s = await getSellerInfoAction(vendedorId);
-      const c = await getActiveContestAction();
-      setSeller(s);
-      setContest(c);
+      try {
+        const [s, c] = await Promise.all([
+          getSellerInfoAction(vendedorId),
+          getActiveContestAction(vendedorId)
+        ]);
+        setSeller(s);
+        setContest(c);
+      } catch (err) {
+        console.error("Error loading sales data:", err);
+      } finally {
+        setInitialLoading(false);
+      }
     }
     loadData();
   }, [vendedorId]);
 
   const handleSubmit = async () => {
-    if (isClosed || selectedNumbers.length !== 5 || !contest || !buyerInfo.nome) return;
+    if (isClosed || selectedNumbers.length !== 5 || !contest?.id || !buyerInfo.nome) return;
     setLoading(true);
     const result = await submitClientTicketAction(vendedorId, contest.id, selectedNumbers, buyerInfo);
     if (result.success) {
@@ -79,13 +107,33 @@ export default function VendaPublicaPage() {
     setLoading(false);
   };
 
-  if (!seller || !contest) {
+  if (initialLoading) {
     return (
       <Flex align="center" justify="center" className="min-h-screen bg-background p-10">
         <Stack gap={4} align="center">
           <Box className="w-12 h-12 border-4 border-primary-light border-t-transparent rounded-full animate-spin" />
           <Text color="muted">Carregando formulário oficial...</Text>
         </Stack>
+      </Flex>
+    );
+  }
+
+  if (!seller || !contest?.schedule) {
+    return (
+      <Flex align="center" justify="center" className="min-h-screen bg-background p-10">
+        <Box bg="glass" padding={10} rounded="lg" border="glass" className="max-w-md text-center">
+          <Stack gap={6} align="center">
+            <AlertTriangle className="text-error" size={48} />
+            <Stack gap={2}>
+              <Heading level={2} size="xl">Vendedor Indisponível</Heading>
+              <Text color="muted">
+                Não foi possível carregar as informações deste vendedor. 
+                Verifique se o link está correto ou tente novamente mais tarde.
+              </Text>
+            </Stack>
+            <Button variant="glass" onClick={() => window.location.reload()}>Tentar Novamente</Button>
+          </Stack>
+        </Box>
       </Flex>
     );
   }
@@ -100,18 +148,45 @@ export default function VendaPublicaPage() {
           {/* Header */}
           <Stack gap={4} align="center" className="text-center">
             <Box className="dynamic-logo w-48 h-12" />
-            <Stack gap={2}>
+            <Stack gap={1}>
               <Heading level={1} size="3xl">FAÇA SUA APOSTA</Heading>
-              <Text variant="description" color="muted">
-                Escolha seus números da sorte e participe do próximo sorteio.
+              <Text variant="description" color="primary" weight="bold">
+                Vendedor: {seller.name} • {seller.city}
               </Text>
+              {contest.id && (
+                <Text variant="tiny" color="muted">
+                  Campanha: #{contest.concurso_numero} {contest.cityName && `(${contest.cityName})`}
+                </Text>
+              )}
             </Stack>
             {isClosed ? (
-              <Badge variant="error" dot>CAMPANHA ENCERRADA: RETORNO ÀS 06:00</Badge>
+              <Badge variant="error" dot>SISTEMA INDISPONÍVEL: RETORNO ÀS {contest.schedule.openTime}</Badge>
+            ) : !contest.id ? (
+              <Badge variant="warning" dot>NENHUMA CAMPANHA ATIVA NO MOMENTO</Badge>
             ) : (
               <Badge variant="success" dot>CAMPANHA ATIVA: #{contest.concurso_numero}</Badge>
             )}
           </Stack>
+
+          {/* Banner da Campanha */}
+          {contest.id && contest.banner_url && (
+            <Box padding={0} className="w-full h-48 md:h-64 rounded-[10px] overflow-hidden border border-white/5 relative group shrink-0 shadow-2xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src={contest.banner_url} 
+                alt="Banner da Campanha" 
+                className="w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105" 
+              />
+              <Box className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              {contest.description && (
+                <Box className="absolute bottom-4 left-6 right-6">
+                  <Text variant="tiny" color="white">
+                    {contest.description}
+                  </Text>
+                </Box>
+              )}
+            </Box>
+          )}
 
           {step === 'picker' ? (
             <Stack gap={10}>
@@ -121,13 +196,13 @@ export default function VendaPublicaPage() {
                     <Flex align="center" justify="center" className="w-12 h-12 bg-error/20 rounded-full shrink-0">
                       <AlertTriangle className="text-error" size={24} />
                     </Flex>
-                    <Stack gap={1}>
-                      <Text color="error" weight="bold" size="lg">Campanha Temporariamente Encerrada</Text>
-                      <Text variant="tiny" color="error">
-                        Nossas campanhas de apostas funcionam diariamente das <strong>06:00 às 17:00</strong>. 
-                        Por favor, retorne amanhã para validar seu jogo.
-                      </Text>
-                    </Stack>
+              <Stack gap={1}>
+                        <Text color="error" weight="bold" size="lg">Vendas Temporariamente Encerradas</Text>
+                        <Text variant="tiny" color="error">
+                          Nosso horário de atendimento é das <strong>{contest.schedule.openTime} às {contest.schedule.closeTime}</strong>. 
+                          Por favor, retorne dentro do horário para validar seu jogo.
+                        </Text>
+                      </Stack>
                   </Flex>
                 </Box>
               )}

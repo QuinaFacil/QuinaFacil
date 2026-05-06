@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export interface ReportFilters {
@@ -9,6 +8,7 @@ export interface ReportFilters {
   managerId: string;
   sellerId: string;
   city: string;
+  state: string;
 }
 
 export interface ReportTicket {
@@ -23,12 +23,10 @@ export interface ReportTicket {
     name: string;
     city: string | null;
     manager_id: string | null;
-  } | {
-    id: string;
-    name: string;
-    city: string | null;
-    manager_id: string | null;
-  }[] | null;
+    cities?: {
+      state: string;
+    } | null;
+  } | null;
 }
 
 export interface ReportStats {
@@ -59,28 +57,29 @@ export async function getFilterOptionsAction() {
     // 2. Busca Vendedores
     const { data: sellers } = await adminSupabase
       .from('profiles')
-      .select('id, name, manager_id, city')
+      .select('id, name, manager_id, city_id, city')
       .eq('role', 'vendedor')
       .eq('active', true)
       .order('name');
 
-    // 3. Busca Cidades Únicas (onde há usuários)
+    // 3. Busca Cidades da tabela mestre e extrai estados únicos
     const { data: citiesData } = await adminSupabase
-      .from('profiles')
-      .select('city')
-      .not('city', 'is', null)
-      .order('city');
+      .from('cities')
+      .select('id, name, state')
+      .eq('active', true)
+      .order('name');
 
-    const uniqueCities = Array.from(new Set(citiesData?.map(c => c.city).filter(Boolean)));
+    const states = Array.from(new Set(citiesData?.map(c => c.state).filter(Boolean))) as string[];
 
     return {
       managers: managers || [],
       sellers: sellers || [],
-      cities: uniqueCities || []
+      cities: citiesData || [],
+      states: states.sort()
     };
   } catch (error: unknown) {
     console.error("[ERROR] getFilterOptionsAction:", error instanceof Error ? error.message : "Erro desconhecido");
-    return { managers: [], sellers: [], cities: [] };
+    return { managers: [], sellers: [], cities: [], states: [] };
   }
 }
 
@@ -89,7 +88,7 @@ export async function getFilterOptionsAction() {
  */
 export async function getReportStatsAction(filters: ReportFilters): Promise<ReportStats> {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     
     // 1. Busca básica de tickets com dados do vendedor e gerente
     let query = supabase.from('tickets').select(`
@@ -99,48 +98,82 @@ export async function getReportStatsAction(filters: ReportFilters): Promise<Repo
       status,
       created_at,
       vendedor_id,
-      vendedor:vendedor_id (
+      vendedor:profiles!vendedor_id (
         id,
         name,
         city,
-        manager_id
+        manager_id,
+        cities (
+          state
+        )
       )
-    `);
+    `).eq('status', 'confirmed');
 
     // Aplicação de Filtros de Data
     if (filters.dateStart) {
-      const start = new Date(filters.dateStart);
-      start.setHours(0, 0, 0, 0);
-      query = query.gte('created_at', start.toISOString());
+      query = query.gte('created_at', filters.dateStart);
     }
     if (filters.dateEnd) {
-      const end = new Date(filters.dateEnd);
-      end.setHours(23, 59, 59, 999);
-      query = query.lte('created_at', end.toISOString());
+      const nextDay = new Date(filters.dateEnd);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      query = query.lt('created_at', nextDayStr);
     }
 
     const { data: ticketsData, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
 
-    const tickets = (ticketsData || []) as ReportTicket[];
+    const rawTickets = (ticketsData || []) as unknown as ReportTicket[];
+    
+    // Normalização para o tipo ReportTicket
+    const tickets = rawTickets.map(t => ({
+      ...t,
+      vendedor: Array.isArray(t.vendedor) ? t.vendedor[0] : t.vendedor
+    })) as ReportTicket[];
 
     // 2. Filtragem Hierárquica em Memória
     let filteredTickets = tickets;
 
+    if (filters.state && filters.state !== 'all') {
+      filteredTickets = filteredTickets.filter(t => t.vendedor?.cities?.state === filters.state);
+    }
+
     if (filters.managerId !== 'all') {
+      const searchId = filters.managerId.toLowerCase();
+      
+      // Get manager name to allow name-based fallback matching
+      const { data: managerProfile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', filters.managerId)
+        .single();
+      
+      const managerName = managerProfile?.name?.toLowerCase();
+
       filteredTickets = filteredTickets.filter(t => {
-        const v = Array.isArray(t.vendedor) ? t.vendedor[0] : t.vendedor;
-        return v?.manager_id === filters.managerId;
+        const ticketManagerId = t.vendedor?.manager_id?.toLowerCase();
+        const sellerId = t.vendedor_id?.toLowerCase();
+        const sellerName = t.vendedor?.name?.toLowerCase();
+        
+        // 1. ID Match (Team)
+        const isTeam = ticketManagerId === searchId;
+        // 2. ID Match (Self)
+        const isSelfById = sellerId === searchId;
+        // 3. Name Match Fallback (For users with multiple profiles like Admin/Manager)
+        const isSelfByName = managerName && sellerName === managerName;
+        
+        return isTeam || isSelfById || isSelfByName;
       });
     }
     if (filters.sellerId !== 'all') {
       filteredTickets = filteredTickets.filter(t => t.vendedor_id === filters.sellerId);
     }
     if (filters.city !== 'all') {
-      filteredTickets = filteredTickets.filter(t => {
-        const v = Array.isArray(t.vendedor) ? t.vendedor[0] : t.vendedor;
-        return v?.city === filters.city;
-      });
+      const normalizeText = (text: string) => 
+        text?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() || "";
+        
+      const searchCity = normalizeText(filters.city);
+      filteredTickets = filteredTickets.filter(t => normalizeText(t.vendedor?.city || '') === searchCity);
     }
 
     // 3. Busca Dados do Período Anterior para Tendência (Trend)
@@ -154,11 +187,12 @@ export async function getReportStatsAction(filters: ReportFilters): Promise<Repo
     const { data: prevTickets } = await supabase
       .from('tickets')
       .select('amount, status')
+      .eq('status', 'confirmed')
       .gte('created_at', prevStart.toISOString())
       .lte('created_at', prevEnd.toISOString());
 
-    const prevConfirmed = prevTickets?.filter(t => t.status === 'confirmed') || [];
-    const prevSales = prevConfirmed.reduce((acc, t) => acc + Number(t.amount), 0);
+    const prevSales = prevTickets?.reduce((acc, t) => acc + Number(t.amount), 0) || 0;
+    const prevCount = prevTickets?.length || 0;
 
     // 4. Busca Prêmios do Período
     const ticketIds = filteredTickets.map(t => t.id);
@@ -174,9 +208,8 @@ export async function getReportStatsAction(filters: ReportFilters): Promise<Repo
     }
 
     // 5. Agregações e Cálculos Dinâmicos
-    const confirmedTickets = filteredTickets.filter(t => t.status === 'confirmed');
-    const totalSales = confirmedTickets.reduce((acc, t) => acc + Number(t.amount), 0);
-    const totalTickets = confirmedTickets.length;
+    const totalSales = filteredTickets.reduce((acc, t) => acc + Number(t.amount), 0);
+    const totalTickets = filteredTickets.length;
 
     const calculateTrend = (current: number, previous: number) => {
       if (previous === 0) return current > 0 ? '+100%' : '0%';
@@ -188,9 +221,9 @@ export async function getReportStatsAction(filters: ReportFilters): Promise<Repo
       totalSales,
       totalTickets,
       prizesPaid,
-      netProfit: totalSales - prizesPaid,
+      netProfit: (totalSales * 0.55) - prizesPaid,
       salesTrend: calculateTrend(totalSales, prevSales),
-      ticketsTrend: calculateTrend(totalTickets, prevConfirmed.length),
+      ticketsTrend: calculateTrend(totalTickets, prevCount),
       recentTickets: filteredTickets.slice(0, 10)
     };
   } catch (error: unknown) {

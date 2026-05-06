@@ -41,14 +41,20 @@ export async function getManagerFilterOptionsAction() {
     // 1. Busca Vendedores vinculados a este gerente
     const { data: sellers } = await supabase
       .from('profiles')
-      .select('id, name, city')
+      .select('id, name, city:cities(name)')
       .eq('manager_id', user.id)
       .eq('role', 'vendedor')
       .eq('active', true)
       .order('name');
 
+    const mappedSellers = (sellers || []).map(s => ({
+      id: s.id,
+      name: s.name,
+      city: (s.city as unknown as { name: string })?.name || '---'
+    }));
+
     return {
-      sellers: sellers || []
+      sellers: mappedSellers
     };
   } catch (error: unknown) {
     console.error("[ERROR] getManagerFilterOptionsAction:", error instanceof Error ? error.message : "Erro desconhecido");
@@ -72,53 +78,44 @@ export async function getManagerReportStatsAction(filters: ManagerReportFilters)
       .eq('manager_id', user.id);
     
     const teamIds = teamMembers?.map(m => m.id) || [];
+    
     if (teamIds.length === 0) return { totalSales: 0, totalTickets: 0, managerCommission: 0, recentTickets: [] };
 
-    // 2. Busca básica de tickets filtrando pela equipe
-    let query = supabase.from('tickets').select(`
-      id,
-      serial_number,
-      amount,
-      status,
-      created_at,
-      vendedor_id,
-      vendedor:vendedor_id (
-        id,
-        name,
-        city
-      )
-    `).in('vendedor_id', teamIds);
+    let query = supabase.from('tickets').select('id, serial_number, amount, status, created_at, vendedor_id')
+      .in('vendedor_id', teamIds)
+      .eq('status', 'confirmed');
 
     // Aplicação de Filtros de Data
     if (filters.dateStart) {
-      const start = new Date(filters.dateStart);
-      start.setHours(0, 0, 0, 0);
-      query = query.gte('created_at', start.toISOString());
+      query = query.gte('created_at', filters.dateStart);
     }
     if (filters.dateEnd) {
-      const end = new Date(filters.dateEnd);
-      end.setHours(23, 59, 59, 999);
-      query = query.lte('created_at', end.toISOString());
+      // Busca até o início do dia seguinte para incluir todo o dia final
+      const nextDay = new Date(filters.dateEnd);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      query = query.lt('created_at', nextDayStr);
     }
 
-    const { data: ticketsData, error } = await query.order('created_at', { ascending: false });
-    if (error) throw error;
+    const { data: filteredData } = await query.order('created_at', { ascending: false });
 
-    const rawTickets = (ticketsData || []) as unknown as {
-      id: string;
-      serial_number: string;
-      amount: number;
-      status: string;
-      created_at: string;
-      vendedor_id: string;
-      vendedor: { id: string; name: string; city: string } | { id: string; name: string; city: string }[];
-    }[];
+    // Busca dados dos vendedores para o mapeamento
+    const { data: sellersInfo } = await supabase
+      .from('profiles')
+      .select('id, name, city:cities(name)')
+      .in('id', teamIds);
+
+    const rawTickets = (filteredData || []) as unknown as ReportTicket[];
 
     let filteredTickets = rawTickets.map(t => {
-      const v = Array.isArray(t.vendedor) ? t.vendedor[0] : t.vendedor;
+      const seller = sellersInfo?.find(s => s.id === t.vendedor_id);
       return {
         ...t,
-        vendedor: v as { id: string; name: string; city: string }
+        vendedor: {
+          id: t.vendedor_id,
+          name: seller?.name || 'Vendedor',
+          city: (seller?.city as unknown as { name: string })?.name || '---'
+        }
       };
     }) as ReportTicket[];
 
@@ -128,12 +125,11 @@ export async function getManagerReportStatsAction(filters: ManagerReportFilters)
     }
 
     // 4. Cálculos
-    const confirmedTickets = filteredTickets.filter(t => t.status === 'confirmed');
-    const totalSales = confirmedTickets.reduce((acc, t) => acc + Number(t.amount), 0);
-    const totalTickets = confirmedTickets.length;
+    const totalSales = filteredTickets.reduce((acc, t) => acc + Number(t.amount), 0);
+    const totalTickets = filteredTickets.length;
     
-    // Supondo comissão de gerente de 5% sobre o faturamento da equipe
-    const managerCommission = totalSales * 0.05;
+    // Comissão de gerente de 25% sobre o faturamento da equipe
+    const managerCommission = totalSales * 0.25;
 
     return {
       totalSales,

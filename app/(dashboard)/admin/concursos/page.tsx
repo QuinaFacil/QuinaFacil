@@ -4,13 +4,16 @@ import React from 'react';
 import { Section } from '@/components/ui/Section';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
-import { Trophy } from 'lucide-react';
+import { Flex } from '@/components/ui/Flex';
 import { ConcursoList } from '@/components/ui/ConcursoList';
 import { ConcursoModal } from '@/components/ui/ConcursoModal';
+import { SalesScheduleModal } from '@/components/ui/SalesScheduleModal';
+import { Settings, Trophy } from 'lucide-react';
 import type { Concurso } from '@/types/lottery';
 
 export default function AdminConcursosPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [selectedConcurso, setSelectedConcurso] = React.useState<Concurso | null>(null);
 
   const handleEdit = (concurso: Concurso, forceStatus?: string) => {
@@ -37,14 +40,24 @@ export default function AdminConcursosPage() {
         num="01" 
         title="Histórico de Campanhas"
         action={
-          <Button 
-            variant="primary" 
-            icon={Trophy} 
-            onClick={handleOpenNew}
-            fullWidth
-          >
-            Nova Campanha
-          </Button>
+          <Flex gap={3} className="w-full lg:w-auto">
+            <Button 
+              variant="glass" 
+              icon={Settings} 
+              onClick={() => setIsSettingsOpen(true)}
+              className="lg:w-14"
+              title="Configurações de Horário"
+            />
+            <Button 
+              variant="primary" 
+              icon={Trophy} 
+              onClick={handleOpenNew}
+              fullWidth
+              className="flex-1 lg:min-w-[200px]"
+            >
+              Nova Campanha
+            </Button>
+          </Flex>
         }
       >
         <ConcursoList 
@@ -60,6 +73,10 @@ export default function AdminConcursosPage() {
           setSelectedConcurso(null);
         }}
         selectedConcurso={selectedConcurso}
+      />
+      <SalesScheduleModal 
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </>
   );

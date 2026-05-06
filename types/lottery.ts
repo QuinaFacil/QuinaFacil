@@ -7,5 +7,8 @@ export type Concurso = {
   prize_amount: number;
   banner_url?: string;
   description?: string;
+  city_id?: string | null;
+  ticket_goal?: number;
+  goal_indicator_active?: boolean;
   created_at: string;
 };

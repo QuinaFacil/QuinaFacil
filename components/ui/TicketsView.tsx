@@ -31,6 +31,7 @@ interface TicketData {
   serial_number: string;
   amount: number;
   status: string;
+  is_validated: boolean;
   created_at: string;
   vendedor?: { name: string };
   concurso?: { concurso_numero: number };
@@ -78,7 +79,16 @@ export function TicketsView() {
               (tickets as unknown as TicketData[]).map((ticket) => (
                 <ListRow
                   key={ticket.id}
-                  title={ticket.serial_number}
+                  title={
+                    <Flex gap={2} align="center">
+                      <Text weight="black">{ticket.serial_number}</Text>
+                      {!ticket.is_validated && (
+                        <Box bg="error" padding={0} className="px-1.5 py-0.5 rounded-[3px]">
+                          <Text variant="tiny" weight="black" className="text-[7px] text-white uppercase">Pendente</Text>
+                        </Box>
+                      )}
+                    </Flex>
+                  }
                   sub={
                     <Flex gap={3} align="center" className="flex-wrap">
                       <Flex align="center" gap={1}>
@@ -98,7 +108,7 @@ export function TicketsView() {
                   amount={`R$ ${Number(ticket.amount).toFixed(2)}`}
                   time=""
                   icon={Ticket}
-                  variant={ticket.status === 'confirmed' ? 'success' : 'neutral'}
+                  variant={ticket.is_validated ? 'success' : 'neutral'}
                   href={`/ticket/${ticket.serial_number}`}
                 >
                   <Flex gap={2} align="center">

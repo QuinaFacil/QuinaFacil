@@ -14,6 +14,7 @@ export interface UserInput {
   manager_id?: string;
   phone?: string;
   city?: string;
+  city_id?: string;
   pix_key?: string;
   cpf?: string;
   address?: string;
@@ -56,6 +57,10 @@ export async function getUsersAction() {
         *,
         manager:manager_id (
           name
+        ),
+        city_rel:city_id (
+          name,
+          state
         )
       `)
       .order('created_at', { ascending: false });
@@ -94,6 +99,27 @@ export async function getGerentesAction() {
       .from('profiles')
       .select('id, name')
       .eq('role', 'gerente')
+      .eq('active', true)
+      .order('name');
+
+    if (error) throw error;
+    return data || [];
+  } catch (error: unknown) {
+    throw new Error(error instanceof Error ? error.message : "Erro desconhecido");
+  }
+}
+
+/**
+ * Lista todas as cidades ativas para o seletor
+ */
+export async function getCitiesOptionsAction() {
+  try {
+    await checkAdmin();
+    const adminSupabase = createAdminClient();
+    
+    const { data, error } = await adminSupabase
+      .from('cities')
+      .select('id, name, state')
       .eq('active', true)
       .order('name');
 
@@ -164,17 +190,30 @@ export async function createUserAction(formData: UserInput) {
 
     // 2. Herança de Cidade para Vendedores
     let finalCity = formData.city;
+    let finalCityId = formData.city_id;
+
     if (formData.role === 'vendedor' && formData.manager_id) {
       const { data: managerProfile } = await adminSupabase
         .from('profiles')
-        .select('city')
+        .select('city, city_id')
         .eq('id', formData.manager_id)
         .single();
       
+      if (managerProfile?.city_id) {
+        finalCityId = managerProfile.city_id;
+      }
       if (managerProfile?.city) {
         finalCity = managerProfile.city;
       }
     }
+
+    // Validação extra de segurança
+    const cityIdToSave = isValidUUID(finalCityId || '') ? finalCityId : null;
+
+    console.error(">>> [DEBUG] CRIANDO USUÁRIO:", { 
+      city_text: finalCity, 
+      city_uuid: cityIdToSave 
+    });
 
     // 3. Salva o perfil
     const { error: profileError } = await adminSupabase
@@ -186,6 +225,7 @@ export async function createUserAction(formData: UserInput) {
         manager_id: formData.manager_id || null,
         phone: formData.phone || null,
         city: finalCity || null,
+        city_id: cityIdToSave,
         pix_key: formData.pix_key || null,
         cpf: formData.cpf || null,
         address: formData.address || null,
@@ -210,6 +250,15 @@ export async function createUserAction(formData: UserInput) {
 }
 
 /**
+ * Verifica se uma string é um UUID válido
+ */
+function isValidUUID(uuid: string) {
+  if (!uuid) return false;
+  const s = "" + uuid;
+  return !!s.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+}
+
+/**
  * Atualiza um usuário existente
  */
 export async function updateUserAction(id: string, formData: UserInput) {
@@ -227,17 +276,31 @@ export async function updateUserAction(id: string, formData: UserInput) {
 
     // 2. Herança de Cidade para Vendedores
     let finalCity = formData.city;
+    let finalCityId = formData.city_id;
+
     if (formData.role === 'vendedor' && formData.manager_id) {
       const { data: managerProfile } = await adminSupabase
         .from('profiles')
-        .select('city')
+        .select('city, city_id')
         .eq('id', formData.manager_id)
         .single();
       
+      if (managerProfile?.city_id) {
+        finalCityId = managerProfile.city_id;
+      }
       if (managerProfile?.city) {
         finalCity = managerProfile.city;
       }
     }
+
+    // Validação extra de segurança
+    const cityIdToSave = isValidUUID(finalCityId || '') ? finalCityId : null;
+
+    console.error(">>> [DEBUG] SALVANDO USUÁRIO:", { 
+      id, 
+      city_text: finalCity, 
+      city_uuid: cityIdToSave 
+    });
 
     // 3. Atualiza o perfil
     const { error: profileError } = await adminSupabase
@@ -248,6 +311,7 @@ export async function updateUserAction(id: string, formData: UserInput) {
         manager_id: formData.manager_id || null,
         phone: formData.phone || null,
         city: finalCity || null,
+        city_id: cityIdToSave,
         pix_key: formData.pix_key || null,
         cpf: formData.cpf || null,
         address: formData.address || null
@@ -282,12 +346,39 @@ export async function deleteUserAction(id: string) {
     // 1. Busca dados para o log antes de deletar
     const { data: profile } = await adminSupabase.from('profiles').select('name').eq('id', id).single();
 
-    // 2. Deleta do Auth
-    const { error: authError } = await adminSupabase.auth.admin.deleteUser(id);
-    if (authError) throw authError;
+    // 2. LIMPANDO TUDO VINCULADO (HARD DELETE EXTREMO)
+    // 2.1. Buscar IDs dos bilhetes do usuário para limpar vencedores
+    const { data: userTickets } = await adminSupabase.from('tickets').select('id').eq('vendedor_id', id);
+    const ticketIds = userTickets?.map(t => t.id) || [];
 
-    // 3. Garante deleção do perfil (embora Auth delete cascade devesse cuidar)
-    await adminSupabase.from('profiles').delete().eq('id', id);
+    if (ticketIds.length > 0) {
+      // 2.2. Deletar vencedores vinculados a esses bilhetes
+      await adminSupabase.from('winners').delete().in('ticket_id', ticketIds);
+      // 2.3. Deletar os bilhetes
+      await adminSupabase.from('tickets').delete().eq('vendedor_id', id);
+    }
+
+    // 2.4. Deletar saques e comissões
+    await adminSupabase.from('withdrawals').delete().eq('vendedor_id', id);
+    await adminSupabase.from('commissions').delete().eq('vendedor_id', id);
+
+    // 2.5. Limpar logs de auditoria (para permitir deletar o autor das ações)
+    await adminSupabase.from('audit_logs').update({ user_id: null }).eq('user_id', id);
+
+    // 3. Antes de deletar do Auth, limpamos referências em profiles
+    // Se ele for um gerente, removemos ele como gerente de outros perfis para evitar erro de FK
+    await adminSupabase.from('profiles').update({ manager_id: null }).eq('manager_id', id);
+
+    // 4. Deleta do Auth
+    const { error: authError } = await adminSupabase.auth.admin.deleteUser(id);
+    if (authError) {
+      // Logamos o aviso mas continuamos para garantir a limpeza do perfil no banco
+      console.warn("[deleteUserAction] Aviso ao deletar do Auth:", authError.message);
+    }
+
+    // 5. Garante deleção do perfil
+    const { error: profileDeleteError } = await adminSupabase.from('profiles').delete().eq('id', id);
+    if (profileDeleteError) throw profileDeleteError;
 
     // Auditoria
     await AuditService.record({
@@ -300,6 +391,14 @@ export async function deleteUserAction(id: string) {
     revalidatePath("/admin/logs");
     return { success: true };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : "Erro desconhecido" };
+    console.error("[deleteUserAction]:", error);
+    let message = error instanceof Error ? error.message : "Erro desconhecido";
+    
+    // Tradução de erros comuns de banco de dados
+    if (message.includes("violates foreign key constraint") || message.includes("Database error deleting user")) {
+      message = "Este usuário não pode ser excluído pois possui registros vinculados (bilhetes, saques ou comissões). Recomendamos desativar o acesso.";
+    }
+
+    return { success: false, error: message };
   }
 }

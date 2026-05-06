@@ -17,12 +17,18 @@ import { ListRow } from '@/components/ui/ListRow';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function AdminRelatoriosPage() {
-  const [activeFilters, setActiveFilters] = useState<IReportFilters>({
-    dateStart: new Date().toISOString().split('T')[0],
-    dateEnd: new Date().toISOString().split('T')[0],
-    managerId: 'all',
-    sellerId: 'all',
-    city: 'all'
+  const [activeFilters, setActiveFilters] = useState<IReportFilters>(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+    return {
+      dateStart: start.toISOString().split('T')[0],
+      dateEnd: end.toISOString().split('T')[0],
+      managerId: 'all',
+      sellerId: 'all',
+      city: 'all',
+      state: 'all'
+    };
   });
 
   // 1. Busca opções dos filtros
@@ -51,7 +57,7 @@ export default function AdminRelatoriosPage() {
       <Section num="01" title="Filtros de Auditoria">
         <ReportFilters 
           variant="admin"
-          options={filterOptions || { managers: [], sellers: [], cities: [] }} 
+          options={filterOptions || { managers: [], sellers: [], cities: [], states: [] }} 
           onFilter={handleFilter} 
         />
       </Section>
@@ -63,7 +69,6 @@ export default function AdminRelatoriosPage() {
             value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats?.totalSales || 0)}
             sub="Volume total confirmado"
             icon={DollarSign}
-            trend={stats?.salesTrend}
             bg="glass"
           />
           <StatCard
@@ -71,7 +76,6 @@ export default function AdminRelatoriosPage() {
             value={stats?.totalTickets?.toString() || '0'}
             sub="Total de apostas"
             icon={Ticket}
-            trend={stats?.ticketsTrend}
             bg="glass"
           />
           <StatCard

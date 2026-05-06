@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUsersAction, toggleUserStatusAction, deleteUserAction, createUserAction, updateUserAction, getGerentesAction } from '@/app/(dashboard)/admin/usuarios/actions';
+import { getUsersAction, toggleUserStatusAction, deleteUserAction, createUserAction, updateUserAction, getGerentesAction, getCitiesOptionsAction } from '@/app/(dashboard)/admin/usuarios/actions';
 import { logout } from '@/app/(auth)/login/actions';
 import { getCurrentUserProfileAction } from '@/app/(dashboard)/actions';
 import { ListRow } from '@/components/ui/ListRow';
@@ -14,6 +14,7 @@ import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { UserModal, type UserProfile, type UserInput } from '@/components/ui/UserModal';
+import { AlertModal } from '@/components/ui/AlertModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { User, Shield, Briefcase, UserCheck, Phone, Edit2, Trash2, Power, MapPin, Wallet, Loader2, Users } from 'lucide-react';
 
@@ -26,6 +27,7 @@ export const UserList = React.forwardRef<UserListHandle, Record<string, unknown>
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState<string | null>(null);
+  const [alertConfig, setAlertConfig] = React.useState<{ isOpen: boolean; title: string; message: string; variant: 'info' | 'success' | 'error' }>({ isOpen: false, title: '', message: '', variant: 'info' });
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
@@ -46,14 +48,24 @@ export const UserList = React.forwardRef<UserListHandle, Record<string, unknown>
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteUserAction(id),
-    onSuccess: (_, deletedId) => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      
-      // Se eu me auto remover, devo ser deslogado imediatamente
-      if (currentUser?.id === deletedId) {
-        logout();
+    onSuccess: (res, deletedId) => {
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+        queryClient.invalidateQueries({ queryKey: ['report-filter-options'] });
+
+        // Se eu me auto remover, devo ser deslogado imediatamente
+        if (currentUser?.id === deletedId) {
+          logout();
+        } else {
+          setUserToDelete(null);
+        }
       } else {
-        setUserToDelete(null);
+        setAlertConfig({
+          isOpen: true,
+          title: 'Erro na Exclusão',
+          message: res.error || 'Não foi possível excluir o usuário.',
+          variant: 'error'
+        });
       }
     }
   });
@@ -107,9 +119,9 @@ export const UserList = React.forwardRef<UserListHandle, Record<string, unknown>
 
   if (!users || users.length === 0) {
     return (
-      <EmptyState 
-        icon={Users} 
-        description="Nenhum usuário encontrado no sistema." 
+      <EmptyState
+        icon={Users}
+        description="Nenhum usuário encontrado no sistema."
         minHeight={300}
       />
     );
@@ -175,7 +187,7 @@ export const UserList = React.forwardRef<UserListHandle, Record<string, unknown>
                     </Badge>
                   )}
 
-                  {user.pix_key && user.role !== 'gerente' && (
+                  {user.pix_key && user.role !== 'admin' && (
                     <Badge variant="warning" icon={Wallet} size="xs">
                       PIX: {user.pix_key}
                     </Badge>
@@ -215,6 +227,15 @@ export const UserList = React.forwardRef<UserListHandle, Record<string, unknown>
         selectedUser={selectedUser}
         onSubmit={handleModalSubmit}
         getGerentes={getGerentesAction}
+        getCities={getCitiesOptionsAction}
+      />
+
+      <AlertModal
+        isOpen={alertConfig.isOpen}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        variant={alertConfig.variant}
+        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
       />
 
       <Modal
@@ -227,7 +248,7 @@ export const UserList = React.forwardRef<UserListHandle, Record<string, unknown>
               Cancelar
             </Button>
             <Button variant="danger" onClick={handleDeleteConfirm} loading={deleteMutation.isPending} fullWidth>
-              Excluir Permanentemente
+              Excluir
             </Button>
           </Stack>
         }

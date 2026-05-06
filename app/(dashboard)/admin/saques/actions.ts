@@ -40,6 +40,8 @@ export async function getWithdrawalRequestsAction(): Promise<WithdrawalRequest[]
         )
       `)
       .order('created_at', { ascending: false });
+    
+    console.log("[DEBUG] Admin Withdrawals - Requests found:", data?.length || 0);
 
     if (error) throw error;
 

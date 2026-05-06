@@ -79,7 +79,7 @@ export function ConcursoList({ onEdit, onLaunchResult }: ConcursoListProps) {
     <>
       <Box padding={0} bg="glass" border="glass" className="overflow-hidden w-full">
         <Stack gap={0}>
-          {concursos.map((concurso: Concurso) => {
+          {concursos.map((concurso) => {
             const statusConfig = {
               open: { variant: 'success' as const, label: 'Vendas Abertas' },
               closed: { variant: 'warning' as const, label: 'Aguardando Sorteio' },
@@ -173,8 +173,37 @@ export function ConcursoList({ onEdit, onLaunchResult }: ConcursoListProps) {
                   </Flex>
                 }
               >
-                {/* Visualização das Bolas do Sorteio / Status */}
-                <Flex align="center" justify="end" className="w-full">
+                <Flex align="center" justify="end" gap={6} className="w-full">
+                  {(concurso.ticket_goal ?? 0) > 0 && (
+                    <Box className="w-full max-w-[240px]">
+                      <Stack gap={2}>
+                        <Flex justify="between" align="center">
+                          <Text variant="tiny" color={concurso.is_paid ? "success" : "primary"} className="font-bold">
+                            {concurso.is_paid ? 'META ATINGIDA' : 'PROGRESSO DA META'}
+                          </Text>
+                          <Text variant="tiny" color="muted">
+                            {concurso.goal_percentage.toFixed(1)}%
+                          </Text>
+                        </Flex>
+                        <Box className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                          <Box 
+                            className={`h-full ${concurso.is_paid ? 'bg-brand-success shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-primary-light shadow-[0_0_10px_rgba(0,132,255,0.5)]'} transition-all duration-1000`}
+                            style={{ width: `${Math.min(100, concurso.goal_percentage)}%` }}
+                          />
+                        </Box>
+                        <Flex justify="between" align="center">
+                          <Text variant="tiny" color="muted" className="opacity-60 uppercase">
+                            {concurso.is_paid ? 'LUCRO LÍQUIDO:' : 'FALTAM:'}
+                          </Text>
+                          <Text variant="tiny" color={concurso.is_paid ? "success" : "muted"} className="font-bold">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                              concurso.is_paid ? concurso.profit : Math.max((concurso.ticket_goal || 0) - (concurso.sales_net || 0), 0)
+                            )}
+                          </Text>
+                        </Flex>
+                      </Stack>
+                    </Box>
+                  )}
                   {concurso.numeros ? (
                     <Flex gap={3} justify="end" wrap={false} className="opacity-60">
                       {concurso.numeros.map((num: number, idx: number) => (

@@ -7,6 +7,8 @@ export interface TextProps {
   weight?: 'normal' | 'medium' | 'bold' | 'black';
   size?: 'xs' | 'sm' | 'base' | 'lg' | 'xl';
   transform?: 'none' | 'uppercase' | 'capitalize' | 'lowercase';
+  italic?: boolean;
+  opacity?: number;
   className?: string;
   as?: 'p' | 'span' | 'div';
 }
@@ -18,6 +20,8 @@ export function Text({
   weight,
   size,
   transform,
+  italic,
+  opacity,
   className = "",
   as = 'p'
 }: TextProps) {
@@ -73,8 +77,11 @@ export function Text({
       ${weight ? weights[weight] : ''}
       ${size ? sizes[size] : ''}
       ${transform ? transforms[transform] : ''}
+      ${italic ? 'italic' : ''}
       ${className}
-    `.replace(/\s+/g, ' ').trim()}>
+    `.replace(/\s+/g, ' ').trim()}
+    style={opacity !== undefined ? { opacity } : undefined}
+    >
       {children}
     </Tag>
   );

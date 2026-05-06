@@ -110,10 +110,28 @@ export async function getDashboardStatsAction(): Promise<AdminDashboardStats | n
       if (activeContest.data_fim) {
         endTimeMs = new Date(activeContest.data_fim).getTime();
       } else if ((activeContest as { draw_date?: string }).draw_date) {
-        endTimeMs = new Date((activeContest as { draw_date?: string }).draw_date!).getTime();
+        // Define o sorteio para as 20h do dia configurado
+        try {
+          const dateStr = (activeContest as { draw_date?: string }).draw_date!;
+          // Pega apenas a parte da data (YYYY-MM-DD) para evitar problemas com ISO string
+          const datePart = dateStr.split('T')[0];
+          const [year, month, day] = datePart.split('-').map(Number);
+          
+          if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+            const targetDate = new Date(year, month - 1, day, 20, 0, 0);
+            endTimeMs = targetDate.getTime();
+          } else {
+            throw new Error("Invalid date parts");
+          }
+        } catch (e) {
+          console.error("Erro ao processar draw_date:", e);
+          const fallback = new Date();
+          fallback.setHours(20, 0, 0, 0);
+          endTimeMs = fallback.getTime();
+        }
       } else {
         const fallbackEnd = new Date();
-        fallbackEnd.setHours(17, 0, 0, 0);
+        fallbackEnd.setHours(20, 0, 0, 0);
         if (fallbackEnd.getTime() < new Date().getTime()) {
           fallbackEnd.setDate(fallbackEnd.getDate() + 1);
         }

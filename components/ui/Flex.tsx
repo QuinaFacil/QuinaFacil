@@ -19,9 +19,17 @@ export function Flex(props: FlexProps) {
     wrap = false, 
     className = "",
     as: Tag = 'div',
-    id,
-    onClick,
-    style
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    padding: _padding, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    bg: _bg, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    border: _border, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    rounded: _rounded, 
+    minHeight,
+    style,
+    ...rest
   } = props;
 
   const layoutClasses = useLayoutStyles(props);
@@ -62,9 +70,8 @@ export function Flex(props: FlexProps) {
 
   return (
     <Tag 
-      id={id}
-      onClick={onClick}
-      style={style}
+      {...rest}
+      style={{ ...style, minHeight }}
       className={`
         flex 
         ${directionStyles[direction]} 

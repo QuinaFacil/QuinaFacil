@@ -15,7 +15,7 @@ export async function getMyProfileAction() {
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select('*, city:cities(name)')
     .eq('id', user.id)
     .single();
 
@@ -23,6 +23,7 @@ export async function getMyProfileAction() {
 
   return {
     ...profile,
+    city_name: (profile as unknown as { city: { name: string } | null }).city?.name || '',
     email: user.email
   };
 }

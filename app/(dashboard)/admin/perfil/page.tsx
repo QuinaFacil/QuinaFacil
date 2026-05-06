@@ -161,6 +161,7 @@ export default function AdminPerfilPage() {
                   icon={MapPin}
                   required
                 />
+
                 <InputField
                   label="Nova Senha (Opcional)"
                   name="password"

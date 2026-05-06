@@ -25,6 +25,7 @@ interface Ticket {
   comprador_nome: string | null;
   concursos?: {
     concurso_numero: number;
+    status: string;
   };
 }
 
@@ -115,42 +116,49 @@ export default function TicketsPendentesPage() {
               {isLoading ? (
                 <Box padding={10} className="text-center"><Text>Carregando...</Text></Box>
               ) : tickets && tickets.length > 0 ? (
-                tickets.map((ticket: Ticket) => (
-                  <ListRow
-                    key={ticket.id}
-                    title={`Bilhete #${ticket.serial_number.slice(-8)}`}
-                    sub={
-                      <Stack gap={1}>
-                        <Text variant="tiny" color="primary">Concurso #{ticket.concursos?.concurso_numero}</Text>
-                        <Text variant="tiny" color="muted">Cliente: {ticket.comprador_nome || 'Anônimo'}</Text>
-                      </Stack>
-                    }
-                    amount={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ticket.amount)}
-                    time={new Date(ticket.created_at).toLocaleString('pt-BR')}
-                    icon={Clock}
-                  >
-                    <Flex gap={2}>
-                      <Button 
-                        variant="glass" 
-                        size="sm" 
-                        className="text-error hover:bg-error/10" 
-                        icon={X}
-                        onClick={() => setDeleteConfirm({ isOpen: true, ticketId: ticket.id })}
-                        disabled={rejectMutation.isPending || validateMutation.isPending}
-                      />
-                      <Button 
-                        variant="primary" 
-                        size="sm" 
-                        icon={Check}
-                        onClick={() => validateMutation.mutate(ticket.id)}
-                        loading={validateMutation.isPending && validateMutation.variables === ticket.id}
-                        disabled={validateMutation.isPending || rejectMutation.isPending}
-                      >
-                        Validar PIX
-                      </Button>
-                    </Flex>
-                  </ListRow>
-                ))
+                tickets.map((ticket: Ticket) => {
+                  const isConcursoClosed = ticket.concursos?.status !== 'open';
+                  
+                  return (
+                    <ListRow
+                      key={ticket.id}
+                      title={`Bilhete #${ticket.serial_number.slice(-8)}`}
+                      sub={
+                        <Stack gap={1}>
+                          <Text variant="tiny" color="primary">Concurso #{ticket.concursos?.concurso_numero}</Text>
+                          <Text variant="tiny" color="muted">Cliente: {ticket.comprador_nome || 'Anônimo'}</Text>
+                        </Stack>
+                      }
+                      amount={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ticket.amount)}
+                      time={new Date(ticket.created_at).toLocaleString('pt-BR')}
+                      icon={Clock}
+                    >
+                      <Flex gap={2} align="center">
+                        {isConcursoClosed && (
+                          <Text variant="tiny" color="error" weight="bold" className="hidden md:block">CAMPANHA ENCERRADA</Text>
+                        )}
+                        <Button 
+                          variant="glass" 
+                          size="sm" 
+                          className="text-error hover:bg-error/10" 
+                          icon={X}
+                          onClick={() => setDeleteConfirm({ isOpen: true, ticketId: ticket.id })}
+                          disabled={rejectMutation.isPending || validateMutation.isPending}
+                        />
+                        <Button 
+                          variant={isConcursoClosed ? 'glass' : 'primary'} 
+                          size="sm" 
+                          icon={Check}
+                          onClick={() => validateMutation.mutate(ticket.id)}
+                          loading={validateMutation.isPending && validateMutation.variables === ticket.id}
+                          disabled={validateMutation.isPending || rejectMutation.isPending || isConcursoClosed}
+                        >
+                          {isConcursoClosed ? 'Bloqueado' : 'Validar PIX'}
+                        </Button>
+                      </Flex>
+                    </ListRow>
+                  );
+                })
               ) : (
                 <EmptyState 
                   icon={Clock} 

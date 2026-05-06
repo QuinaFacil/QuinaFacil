@@ -13,6 +13,7 @@ export interface AdminProfile {
   email?: string | null;
   cpf?: string | null;
   address?: string | null;
+  pix_key?: string | null;
 }
 
 /**
@@ -51,6 +52,7 @@ export async function updateAdminProfileAction(formData: FormData) {
     const phone = formData.get('phone') as string;
     const cpf = formData.get('cpf') as string;
     const address = formData.get('address') as string;
+    const pix_key = formData.get('pix_key') as string;
     const password = formData.get('password') as string;
     const avatarFile = formData.get('avatar') as File | null;
 
@@ -87,6 +89,7 @@ export async function updateAdminProfileAction(formData: FormData) {
         phone,
         cpf,
         address,
+        pix_key,
         avatar_url
       })
       .eq('id', user.id);

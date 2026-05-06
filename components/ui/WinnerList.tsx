@@ -23,6 +23,7 @@ interface Winner {
       phone: string;
     };
   };
+  matches: number;
 }
 
 interface WinnerListProps {
@@ -130,6 +131,14 @@ export function WinnerList({ concursoId, winners, isLoading, onRefresh }: Winner
                 <Stack gap={1}>
                   <Text variant="tiny" color="primary">VENDEDOR</Text>
                   <Text variant="auxiliary" color="muted">{winner.ticket?.vendedor?.name || 'Sistema'}</Text>
+                </Stack>
+                <Stack gap={1}>
+                  <Text variant="tiny" color="primary">ACERTOS</Text>
+                  <Box padding={1} bg={winner.matches === 5 ? 'info' : 'glass'} className={`rounded-[5px] text-center border ${winner.matches === 5 ? 'border-primary-light/30' : 'border-white/5'}`}>
+                    <Text variant="tiny" className={`font-black ${winner.matches === 5 ? 'text-primary-light' : 'text-foreground'}`}>
+                      {winner.matches === 5 ? 'QUINA' : 'QUADRA'}
+                    </Text>
+                  </Box>
                 </Stack>
               </Flex>
             </Stack>

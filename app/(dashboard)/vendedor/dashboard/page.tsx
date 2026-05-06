@@ -89,14 +89,14 @@ export default function VendedorDashboardPage() {
 
       {/* Seção 01: Pulse da Operação */}
       <Section num="01" title="Pulse da Operação">
-        <Grid cols={2} gap={6}>
+        <Grid cols={3} gap={6}>
           {stats?.activeContest ? (
             <DrawTimer 
               time={stats.timeRemaining} 
               progress={stats.contestProgress}
               endTime={stats.endTime}
-              label="Tempo para Sorteio"
-              statusText={`Campanha #${stats.activeContest.concurso_numero}`}
+              label="TEMPO RESTANTE DE VENDAS"
+              statusText={`Expediente: ${stats.timeRemaining.split(':').length === 3 ? 'Em andamento' : 'Encerrado'}`}
               className="h-full"
             />
           ) : (
@@ -112,7 +112,20 @@ export default function VendedorDashboardPage() {
             value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats?.salesToday || 0)}
             sub="Volume total bruto"
             icon={DollarSign}
-            trend={stats?.salesTrend}
+            bg="glass"
+          />
+
+          <StatCard
+            label="Meta da Campanha"
+            value={stats?.goalStats ? `${stats.goalStats.percentage.toFixed(1)}%` : '0.0%'}
+            sub={stats?.goalStats 
+              ? (stats.goalStats.isPaid 
+                ? `Lucro: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.goalStats.profit)}` 
+                : `Faltam: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.max(stats.goalStats.target - stats.goalStats.currentNet, 0))}`)
+              : "Nenhuma campanha ativa"
+            }
+            icon={TrendingUp}
+            variant={stats?.goalStats?.isPaid ? 'success' : 'neutral'}
             bg="glass"
           />
         </Grid>

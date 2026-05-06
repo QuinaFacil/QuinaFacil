@@ -11,6 +11,7 @@ export interface BaseProps {
   as?: React.ElementType;
   onClick?: (e: React.MouseEvent) => void;
   style?: React.CSSProperties;
+  minHeight?: number | string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
@@ -75,14 +76,28 @@ export function useLayoutStyles(props: BaseProps) {
 }
 
 export function Box(props: BaseProps) {
-  const { children, className = "", id, as: Tag = 'div', onClick, style } = props;
+  const { 
+    children, 
+    className = "", 
+    as: Tag = 'div', 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    padding: _padding, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    bg: _bg, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    border: _border, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    rounded: _rounded, 
+    minHeight,
+    style,
+    ...rest 
+  } = props;
   const layoutClasses = useLayoutStyles(props);
 
   return (
     <Tag 
-      id={id}
-      onClick={onClick}
-      style={style}
+      {...rest}
+      style={{ ...style, minHeight }}
       className={`${layoutClasses} ${className}`}
     >
       {children}

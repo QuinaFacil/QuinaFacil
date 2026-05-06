@@ -18,7 +18,7 @@ export async function getPendingTicketsAction() {
       .from('tickets')
       .select(`
         *,
-        concursos (concurso_numero)
+        concursos (concurso_numero, status)
       `)
       .eq('vendedor_id', user.id)
       .eq('is_validated', false)

@@ -12,8 +12,9 @@ import { Calendar, Search } from 'lucide-react';
 interface ReportFiltersProps {
   options?: {
     managers?: { id: string; name: string }[];
-    sellers?: { id: string; name: string; manager_id?: string }[];
-    cities?: string[];
+    sellers?: { id: string; name: string; manager_id?: string; city?: string; city_id?: string }[];
+    cities?: { id: string; name: string }[];
+    states?: string[];
   };
   onFilter: (filters: ReportFilterValues) => void;
   variant?: 'admin' | 'manager' | 'seller';
@@ -25,15 +26,22 @@ export type ReportFilterValues = {
   managerId: string;
   sellerId: string;
   city: string;
+  state: string;
 };
 
 export function ReportFilters({ options, onFilter, variant = 'manager' }: ReportFiltersProps) {
-  const [filters, setFilters] = useState<ReportFilterValues>({
-    dateStart: new Date().toISOString().split('T')[0],
-    dateEnd: new Date().toISOString().split('T')[0],
-    managerId: 'all',
-    sellerId: 'all',
-    city: 'all'
+  const [filters, setFilters] = useState<ReportFilterValues>(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+    return {
+      dateStart: start.toISOString().split('T')[0],
+      dateEnd: end.toISOString().split('T')[0],
+      managerId: 'all',
+      sellerId: 'all',
+      city: 'all',
+      state: 'all'
+    };
   });
 
   const handleQuickDate = (days: number) => {
@@ -50,12 +58,31 @@ export function ReportFilters({ options, onFilter, variant = 'manager' }: Report
     onFilter(newFilters);
   };
 
-  const filteredSellers = (variant === 'admin' && filters.managerId !== 'all')
-    ? (options?.sellers || []).filter(s => s.manager_id === filters.managerId)
-    : (options?.sellers || []);
+  // Filtros Independentes: Sempre mostram todas as opções
+  const availableManagers = options?.managers || [];
+  const availableSellers = options?.sellers || [];
+  const availableCities = options?.cities || [];
+  const availableStates = options?.states || [];
 
   const isSeller = variant === 'seller';
   const isAdmin = variant === 'admin';
+
+  // Handlers Individuais
+  const handleStateChange = (val: string) => {
+    setFilters(prev => ({ ...prev, state: val }));
+  };
+
+  const handleCityChange = (val: string) => {
+    setFilters(prev => ({ ...prev, city: val }));
+  };
+
+  const handleManagerChange = (val: string) => {
+    setFilters(prev => ({ ...prev, managerId: val }));
+  };
+
+  const handleSellerChange = (val: string) => {
+    setFilters(prev => ({ ...prev, sellerId: val }));
+  };
 
   return (
     <Box padding={6} bg="glass" border="glass" className="border-primary-light/10 overflow-hidden">
@@ -87,7 +114,6 @@ export function ReportFilters({ options, onFilter, variant = 'manager' }: Report
             <Button variant="glass" onClick={() => handleQuickDate(30)}>Este Mês</Button>
           </Flex>
 
-          {/* Botão de Filtrar para modo Vendedor */}
           {isSeller && (
             <Button
               variant="primary"
@@ -100,48 +126,63 @@ export function ReportFilters({ options, onFilter, variant = 'manager' }: Report
           )}
         </Stack>
 
-        {/* Row 2: Filtros de Hierarquia (Admin / Manager) */}
+        {/* Row 2: Filtros de Hierarquia */}
         {!isSeller && (
           <Flex direction="col" gap={4} className="lg:flex-row lg:items-end">
-            {/* Gerente (Apenas Admin vê) */}
-            {isAdmin && (
+            
+            {/* 0. Estado */}
+            {isAdmin && availableStates.length > 0 && (
               <CustomSelect
                 className="flex-1"
-                label="Gerente"
+                label="Estado"
                 options={[
-                  { value: 'all', label: 'Todos os Gerentes' },
-                  ...(options?.managers || []).map(m => ({ value: m.id, label: m.name }))
+                  { value: 'all', label: 'Todos os Estados' },
+                  ...availableStates.map((s: string) => ({ value: s, label: s }))
                 ]}
-                value={filters.managerId}
-                onChange={(val) => setFilters({ ...filters, managerId: val, sellerId: 'all' })}
+                value={filters.state}
+                onChange={handleStateChange}
               />
             )}
 
-            {/* Vendedor (Admin e Manager veem) */}
-            <CustomSelect
-              className="flex-1"
-              label="Vendedor"
-              options={[
-                { value: 'all', label: 'Todos os Vendedores' },
-                ...filteredSellers.map(s => ({ value: s.id, label: s.name }))
-              ]}
-              value={filters.sellerId}
-              onChange={(val) => setFilters({ ...filters, sellerId: val })}
-            />
-
-            {/* Cidade (Apenas Admin vê por padrão, mas Manager poderia se quisesse) */}
+            {/* 1. Cidade */}
             {isAdmin && options?.cities && (
               <CustomSelect
                 className="flex-1"
                 label="Cidade"
                 options={[
                   { value: 'all', label: 'Todas as Cidades' },
-                  ...options.cities.map(c => ({ value: c, label: c }))
+                  ...availableCities.map(c => ({ value: c.name, label: c.name }))
                 ]}
                 value={filters.city}
-                onChange={(val) => setFilters({ ...filters, city: val })}
+                onChange={handleCityChange}
               />
             )}
+
+            {/* 2. Gerente */}
+            {isAdmin && (
+              <CustomSelect
+                className="flex-1"
+                label="Gerente"
+                options={[
+                  { value: 'all', label: 'Todos os Gerentes' },
+                  ...availableManagers.map(m => ({ value: m.id, label: m.name }))
+                ]}
+                value={filters.managerId}
+                onChange={handleManagerChange}
+              />
+            )}
+
+            {/* 3. Vendedor */}
+            <CustomSelect
+              className="flex-1"
+              label="Vendedor"
+              options={[
+                { value: 'all', label: 'Todos os Vendedores' },
+                ...availableSellers.map(s => ({ value: s.id, label: s.name }))
+              ]}
+              value={filters.sellerId}
+              onChange={handleSellerChange}
+            />
 
             <Button
               variant="primary"

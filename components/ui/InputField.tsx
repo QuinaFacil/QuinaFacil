@@ -23,32 +23,48 @@ export const InputField = React.forwardRef<HTMLInputElement | HTMLTextAreaElemen
   as = 'input',
   ...props
 }, ref) => {
+  const internalRef = React.useRef<HTMLTextAreaElement | HTMLInputElement>(null);
+  const combinedRef = (node: HTMLTextAreaElement | HTMLInputElement) => {
+    if (internalRef) (internalRef as React.MutableRefObject<HTMLTextAreaElement | HTMLInputElement>).current = node;
+    if (typeof ref === 'function') ref(node);
+    else if (ref) (ref as React.MutableRefObject<HTMLTextAreaElement | HTMLInputElement>).current = node;
+  };
+
   const [showPassword, setShowPassword] = React.useState(false);
   const isPassword = props.type === 'password';
   const inputType = isPassword ? (showPassword ? 'text' : 'password') : props.type;
+
+  React.useLayoutEffect(() => {
+    if (as === 'textarea' && internalRef.current) {
+      const element = internalRef.current as HTMLTextAreaElement;
+      element.style.height = 'auto';
+      element.style.height = `${element.scrollHeight}px`;
+    }
+  }, [as, props.value]);
 
   return (
     <Flex direction="col" gap={2} className={`w-full min-w-0 ${className}`}>
       {label && <Text variant="label" color="primary" className=" uppercase italic font-black tracking-widest">{label}</Text>}
       <Box padding={0} className="relative group">
-        {Icon && (
-          <Box className="absolute left-5 top-1/2 -translate-y-1/2 text-foreground/30 group-focus-within:text-primary-light transition-colors">
-            <Icon size={18} />
-          </Box>
-        )}
         {as === 'textarea' ? (
           <textarea
             {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
-            ref={ref as React.Ref<HTMLTextAreaElement>}
-            className={`input-field w-full py-4 ${Icon ? 'pl-14' : ''} ${rightElement ? 'pr-14' : ''} ${error ? '!border-error/50 !bg-error/5' : ''}`}
+            ref={combinedRef as React.Ref<HTMLTextAreaElement>}
+            className={`input-field w-full py-4 resize-none overflow-hidden ${Icon ? 'pl-14' : ''} ${rightElement ? 'pr-14' : ''} ${error ? '!border-error/50 !bg-error/5' : ''}`}
           />
         ) : (
           <input
             {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
-            ref={ref as React.Ref<HTMLInputElement>}
+            ref={combinedRef as React.Ref<HTMLInputElement>}
             type={inputType}
             className={`input-field w-full ${Icon ? 'pl-14' : ''} ${isPassword || rightElement ? 'pr-14' : ''} ${error ? '!border-error/50 !bg-error/5' : ''}`}
           />
+        )}
+
+        {Icon && (
+          <Box className={`absolute left-5 z-10 text-foreground/30 group-focus-within:text-primary-light transition-colors ${as === 'textarea' ? 'top-6' : 'top-1/2 -translate-y-1/2'}`}>
+            <Icon size={18} />
+          </Box>
         )}
 
         {isPassword && !rightElement && (

@@ -118,7 +118,8 @@ body {
   .label-caps {
     @apply text-[10px] font-black italic uppercase tracking-[0.2em];
     transition: color 0.3s ease;
-    color: color-mix(in srgb, currentColor, transparent 60%);
+    color: currentColor;
+    opacity: 0.4;
     line-height: 1.2;
   }
 
@@ -172,12 +173,15 @@ body {
   }
 
   .input-field {
-    @apply h-14 w-full rounded-[5px] px-5 text-sm focus:outline-none focus:border-primary-light/50 focus:shadow-[0_0_20px_rgba(0,132,255,0.08)];
-    background: color-mix(in srgb, var(--foreground), transparent 97%);
-    border: 1px solid color-mix(in srgb, var(--foreground), transparent 90%);
+    @apply h-14 w-full rounded-[5px] px-5 text-sm focus:outline-none focus:border-primary-light/50 focus:shadow-[0_0_20px_rgba(0,132,255,0.08)] bg-glass border border-glass-border backdrop-blur-md;
     color: var(--foreground);
     transition: all 0.2s ease;
     color-scheme: dark;
+  }
+
+  textarea.input-field {
+    height: auto !important;
+    min-height: 3.5rem;
   }
 
   .dark .input-field {
@@ -189,7 +193,8 @@ body {
   }
 
   .input-field::placeholder {
-    color: color-mix(in srgb, var(--foreground), transparent 70%);
+    color: var(--foreground);
+    opacity: 0.3;
   }
 
   /* Remove spinner nativo do input number */

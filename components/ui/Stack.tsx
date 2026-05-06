@@ -18,10 +18,17 @@ export function Stack(props: StackProps) {
     className = "", 
     direction = 'col',
     as: Component = 'div',
-    id,
-    onClick,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    padding: _padding, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    bg: _bg, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    border: _border, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    rounded: _rounded, 
+    minHeight,
     style,
-    onSubmit
+    ...rest
   } = props;
 
   const layoutClasses = useLayoutStyles(props);
@@ -63,10 +70,8 @@ export function Stack(props: StackProps) {
 
   return (
     <Component 
-      id={id}
-      onClick={onClick}
-      style={style}
-      onSubmit={onSubmit}
+      {...rest}
+      style={{ ...style, minHeight }}
       className={`
         flex 
         ${directionStyles[direction]} 

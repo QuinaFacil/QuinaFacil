@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Stack } from './Stack';
 import { Flex } from './Flex';
 import { Box } from './Box';
+import { TicketActions } from './TicketActions';
 
 
 import { Text } from "@/components/ui/Text";
@@ -24,10 +25,25 @@ interface DigitalTicketProps {
     amount?: number;
     description?: string;
   };
+  isValidated?: boolean;
+  showActions?: boolean;
+  id?: string;
   className?: string;
 }
 
-export function DigitalTicket({ auditId, dateTime, contest, numbers, buyer, vendedorNome, prizeInfo, className = "" }: DigitalTicketProps) {
+export function DigitalTicket({ 
+  auditId, 
+  dateTime, 
+  contest, 
+  numbers, 
+  buyer, 
+  vendedorNome, 
+  prizeInfo, 
+  isValidated = true,
+  showActions = true,
+  id = "printable-ticket",
+  className = "" 
+}: DigitalTicketProps) {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -42,27 +58,42 @@ export function DigitalTicket({ auditId, dateTime, contest, numbers, buyer, vend
     <Box className={className}>
       <Stack gap={6}>
         <Box
-          padding={10}
+          padding={8}
           bg="white"
           rounded="none"
           className="relative overflow-hidden text-black shadow-xl ticket-container max-w-[380px] mx-auto"
-          id="printable-ticket"
+          id={id}
         >
           <Box className="serrated-edge top-[-10px] rotate-180 opacity-20 print:hidden" />
 
-          {/* Watermark Logo (Yellow) */}
-          <Flex align="end" justify="start" className="absolute inset-0 pointer-events-none opacity-[0.15] print:opacity-40 p-5 select-none">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img 
-              src="/favicon.png" 
-              alt="" 
-              width={60} 
-              height={60} 
-              style={{ filter: 'invert(85%) sepia(60%) saturate(3000%) hue-rotate(5deg) brightness(105%) contrast(100%)' }} 
-            />
-          </Flex>
+          {/* New Watermark Symbol (Repeating) */}
+          <Box 
+            className="absolute inset-0 pointer-events-none select-none opacity-[0.25]"
+            style={{ 
+              backgroundImage: 'url(/simble.png)',
+              backgroundRepeat: 'repeat',
+              backgroundSize: '120px auto',
+              filter: 'sepia(100%) saturate(400%) hue-rotate(-15deg) brightness(1.1)' 
+            }}
+          />
 
-          <Stack gap={8} className="font-sans relative z-10 text-[#1e3a5f]">
+          {/* Pending Stamp */}
+          {!isValidated && (
+            <Flex 
+              align="center" 
+              justify="center" 
+              className="absolute inset-0 pointer-events-none z-[50] overflow-hidden"
+            >
+              <Box 
+                className="border-[6px] border-red-600/60 px-8 py-4 rotate-[-25deg] rounded-[5px]"
+                style={{ transform: 'rotate(-25deg) scale(1.2)' }}
+              >
+                <Text className="text-5xl font-black text-red-600/60 tracking-tighter">PENDENTE</Text>
+              </Box>
+            </Flex>
+          )}
+
+          <Stack gap={5} className="font-sans relative z-10 text-[#1e3a5f]">
             {/* Header Block */}
             <Stack gap={1} align="center">
               <Text className="text-2xl font-black tracking-tighter text-[#1e3a5f]">QUINA FÁCIL</Text>
@@ -91,7 +122,7 @@ export function DigitalTicket({ auditId, dateTime, contest, numbers, buyer, vend
             </Flex>
 
             {/* Numbers Section */}
-            <Stack gap={4} align="center">
+            <Stack gap={3} align="center">
               <Text variant="tiny" className="font-black tracking-widest text-[10px]">SEUS NÚMEROS APOSTADOS</Text>
               <Stack gap={2} align="center" className="w-full">
                 {/* Top Row: 3 numbers */}
@@ -191,12 +222,14 @@ export function DigitalTicket({ auditId, dateTime, contest, numbers, buyer, vend
             <Text variant="tiny" className="font-black text-center tracking-widest text-[10px]">CONFIRA SEUS NÚMEROS NO SITE</Text>
 
             {/* Bottom Status Bar */}
-            <Box className="w-full py-3 text-center !bg-[#1e3a5f]">
-              <Text className="text-white font-black uppercase tracking-widest italic text-sm">Aposta Realizada</Text>
+            <Box className={`w-full py-3 text-center ${isValidated ? '!bg-[#1e3a5f]' : '!bg-red-600'}`}>
+              <Text className="text-white font-black uppercase tracking-widest italic text-sm">
+                {isValidated ? 'Aposta Realizada' : 'Aguardando Validação'}
+              </Text>
             </Box>
 
             {/* Legal Rules Section */}
-            <Stack gap={2} className="opacity-70 pt-2 border-t border-[#1e3a5f]/10">
+            <Stack gap={1} className="opacity-70 pt-2 border-t border-[#1e3a5f]/10">
               <Text variant="tiny" className="text-[7px] leading-tight font-bold">
                 • Só serão válidos os 5 primeiros números emitidos pela Lotofácil.
               </Text>
@@ -233,6 +266,8 @@ export function DigitalTicket({ auditId, dateTime, contest, numbers, buyer, vend
           <Box className="serrated-edge bottom-[-10px] opacity-20 print:hidden" />
         </Box>
 
+        {/* Action Buttons */}
+        {showActions && <TicketActions serialNumber={auditId} />}
       </Stack>
       <style jsx global>{`
         @media print {

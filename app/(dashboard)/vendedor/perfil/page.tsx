@@ -117,6 +117,12 @@ export default function VendedorPerfilPage() {
                   required
                 />
                 <InputField
+                  label="E-mail de Login"
+                  defaultValue={profile?.email || ''}
+                  icon={Mail}
+                  disabled
+                />
+                <InputField
                   label="WhatsApp"
                   name="phone"
                   defaultValue={profile?.phone || ''}
@@ -124,9 +130,9 @@ export default function VendedorPerfilPage() {
                   icon={Phone}
                 />
                 <InputField
-                  label="E-mail de Login"
-                  defaultValue={profile?.email || ''}
-                  icon={Mail}
+                  label="Cidade / Região"
+                  defaultValue={profile?.city_name || ''}
+                  icon={MapPin}
                   disabled
                 />
                 <InputField
@@ -138,13 +144,6 @@ export default function VendedorPerfilPage() {
                   required
                 />
                 <InputField
-                  label="Chave PIX"
-                  name="pix_key"
-                  defaultValue={profile?.pix_key || ''}
-                  placeholder="CPF, E-mail ou Celular"
-                  icon={Wallet}
-                />
-                <InputField
                   label="Endereço Completo"
                   name="address"
                   defaultValue={profile?.address || ''}
@@ -152,14 +151,19 @@ export default function VendedorPerfilPage() {
                   icon={MapPin}
                   required
                 />
-                <Box className="col-span-1 md:col-span-2">
-                  <InputField
-                    label="Nova Senha (Opcional)"
-                    name="password"
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                </Box>
+                <InputField
+                  label="Chave PIX"
+                  name="pix_key"
+                  defaultValue={profile?.pix_key || ''}
+                  placeholder="CPF, E-mail ou Celular"
+                  icon={Wallet}
+                />
+                <InputField
+                  label="Nova Senha (Opcional)"
+                  name="password"
+                  type="password"
+                  placeholder="Mínimo 6 caracteres"
+                />
               </Grid>
 
               <Flex justify="end">

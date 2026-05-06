@@ -17,6 +17,7 @@ export interface DashboardStats {
     draw_date: string;
     created_at: string;
     status: string;
+    ticket_goal: number;
   } | null;
   salesToday: number;
   ticketsTodayCount: number;
@@ -27,6 +28,13 @@ export interface DashboardStats {
   endTime: string;
   pendingTicketsCount: number;
   timestamp: string;
+  goalStats: {
+    target: number;
+    currentNet: number;
+    percentage: number;
+    profit: number;
+    isPaid: boolean;
+  } | null;
 }
 
 /**
@@ -42,14 +50,21 @@ export async function getSellerDashboardStatsAction(): Promise<DashboardStats | 
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
 
-    // 1. Concurso Ativo (Para o Cronômetro)
-    const { data: activeContest } = await supabase
+    // 1. Busca o perfil (para city_id) e Concurso Ativo (Para o Cronômetro)
+    const { data: profile } = await supabase.from('profiles').select('city_id').eq('id', user.id).single();
+    
+    const activeContestQuery = supabase
       .from('concursos')
       .select('*')
       .or('status.eq.open,status.eq.closed')
       .order('draw_date', { ascending: true, nullsFirst: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+
+    if (profile?.city_id) {
+      activeContestQuery.eq('city_id', profile.city_id);
+    }
+
+    const { data: activeContest } = await activeContestQuery.maybeSingle();
 
     // 2. Vendas de Hoje (Valor Bruto)
     const { data: todayTickets } = await supabase
@@ -105,30 +120,90 @@ export async function getSellerDashboardStatsAction(): Promise<DashboardStats | 
       return `${percent > 0 ? '+' : ''}${percent.toFixed(0)}%`;
     };
 
-    // 5. Cálculo de Tempo para o Cronômetro
-    let timeRemaining = "--:--";
+    // 5. Cálculo de Tempo para o Cronômetro (Baseado no Expediente Diário)
+    let timeRemaining = "00:00";
     let contestProgress = 0;
 
-    const endTimeVal = activeContest?.draw_date 
-      ? new Date(activeContest.draw_date).getTime() 
-      : new Date(today).setHours(17, 0, 0, 0);
-
-    if (activeContest) {
-      const start = new Date(activeContest.created_at).getTime();
-      const now = new Date().getTime();
-      const total = endTimeVal - start;
-      const elapsed = now - start;
-      contestProgress = Math.min(Math.max((elapsed / total) * 100, 0), 100);
-
-      const diff = endTimeVal - now;
-      if (diff > 0) {
-        const hours = Math.floor(diff / 3600000);
-        const minutes = Math.floor((diff % 3600000) / 60000);
-        timeRemaining = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    // Busca horários nas configurações
+    const { data: settings } = await supabase.from('system_settings').select('key, value');
+    let openTime = '06:00';
+    let closeTime = '17:00';
+    
+    if (settings) {
+      const scheduleSetting = settings.find(s => s.key === 'sales_schedule');
+      if (scheduleSetting?.value) {
+        try {
+          const schedule = JSON.parse(scheduleSetting.value);
+          if (schedule.openTime) openTime = schedule.openTime;
+          if (schedule.closeTime) closeTime = schedule.closeTime;
+        } catch (e) {
+          console.error("Error parsing sales_schedule:", e);
+        }
       } else {
-        timeRemaining = "00:00";
-        contestProgress = 100;
+        const opTime = settings.find(s => s.key === 'opening_time')?.value;
+        const clTime = settings.find(s => s.key === 'closing_time')?.value;
+        if (opTime) openTime = opTime;
+        if (clTime) closeTime = clTime;
       }
+    }
+
+    const now = new Date();
+    const [openH, openM] = openTime.split(':').map(Number);
+    const [closeH, closeM] = closeTime.split(':').map(Number);
+
+    const startTime = new Date(now);
+    startTime.setHours(openH, openM, 0, 0);
+
+    const endTime = new Date(now);
+    endTime.setHours(closeH, closeM, 0, 0);
+
+    const nowVal = now.getTime();
+    const startVal = startTime.getTime();
+    const endVal = endTime.getTime();
+
+    if (nowVal < startVal) {
+      // Antes de abrir
+      timeRemaining = "00:00";
+      contestProgress = 0;
+    } else if (nowVal >= endVal) {
+      // Depois de fechar
+      timeRemaining = "00:00";
+      contestProgress = 100;
+    } else {
+      // Durante o expediente
+      const diff = endVal - nowVal;
+      const hours = Math.floor(diff / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      timeRemaining = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      const totalShift = endVal - startVal;
+      const elapsed = nowVal - startVal;
+      contestProgress = Math.min(Math.max((elapsed / totalShift) * 100, 0), 100);
+    }
+
+    // 6. Cálculo da Meta da Campanha (Net Revenue = Gross * 0.55)
+    let goalStats = null;
+    if (activeContest) {
+      const { data: contestTickets } = await supabase
+        .from('tickets')
+        .select('amount')
+        .eq('concurso_id', activeContest.id)
+        .eq('status', 'confirmed');
+
+      const grossSales = contestTickets?.reduce((acc, t) => acc + Number(t.amount), 0) || 0;
+      const netRevenue = grossSales * 0.55; // Desconto de 45% (25% Gerente + 20% Vendedor)
+      const target = Number(activeContest.ticket_goal) || 0;
+      const profit = netRevenue - target;
+      const percentage = target > 0 ? (netRevenue / target) * 100 : 0;
+
+      goalStats = {
+        target,
+        currentNet: netRevenue,
+        percentage: percentage,
+        profit: Math.max(profit, 0),
+        isPaid: netRevenue >= target
+      };
     }
 
     return {
@@ -139,9 +214,10 @@ export async function getSellerDashboardStatsAction(): Promise<DashboardStats | 
       salesTrend: calculateTrend(salesToday, salesYesterday),
       contestProgress,
       timeRemaining,
-      endTime: activeContest?.draw_date || new Date(new Date().setHours(17,0,0,0)).toISOString(),
+      endTime: endTime.toISOString(),
       pendingTicketsCount: pendingTicketsCount || 0,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      goalStats
     };
   } catch (error: unknown) {
     console.error("[ERROR] getSellerDashboardStatsAction:", error instanceof Error ? error.message : "Erro desconhecido");

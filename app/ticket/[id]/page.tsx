@@ -57,14 +57,27 @@ export default async function PublicTicketPage({ params, searchParams }: TicketP
 
       <Stack gap={8} align="center" className="relative z-10 max-w-sm w-full">
         {/* Verification Header */}
-        <Box padding={6} bg="glass" border="glass" className="w-full border-brand-success/30 shadow-lg shadow-brand-success/10 rounded-[5px]">
+        <Box 
+          padding={6} 
+          bg="glass" 
+          border="glass" 
+          className={`w-full border-brand-success/30 shadow-lg ${ticket.is_validated ? 'border-brand-success/30 shadow-brand-success/10' : 'border-error/30 shadow-error/10'} rounded-[5px]`}
+        >
           <Flex align="center" justify="center" gap={3}>
-            <Flex align="center" justify="center" className="w-8 h-8 bg-brand-success/20 rounded-[5px]">
-              <CheckCircle2 size={18} className="text-brand-success" />
+            <Flex align="center" justify="center" className={`w-8 h-8 ${ticket.is_validated ? 'bg-brand-success/20' : 'bg-error/20'} rounded-[5px]`}>
+              {ticket.is_validated ? (
+                <CheckCircle2 size={18} className="text-brand-success" />
+              ) : (
+                <AlertCircle size={18} className="text-error" />
+              )}
             </Flex>
             <Stack gap={0}>
-              <Text variant="label" color="success">BILHETE VERIFICADO</Text>
-              <Text variant="sub" color="muted">Aposta oficial Quina Fácil</Text>
+              <Text variant="label" color={ticket.is_validated ? "success" : "error"}>
+                {ticket.is_validated ? 'BILHETE VERIFICADO' : 'AGUARDANDO VALIDAÇÃO'}
+              </Text>
+              <Text variant="sub" color="muted">
+                {ticket.is_validated ? 'Aposta oficial Quina Fácil' : 'Este bilhete ainda não foi validado'}
+              </Text>
             </Stack>
           </Flex>
         </Box>
@@ -76,6 +89,7 @@ export default async function PublicTicketPage({ params, searchParams }: TicketP
           contest={`#${ticket.concursos?.concurso_numero || '---'}`}
           numbers={ticket.numbers}
           vendedorNome={ticket.vendedor?.name}
+          isValidated={ticket.is_validated}
           prizeInfo={{
             amount: ticket.concursos?.prize_amount,
             description: ticket.concursos?.description

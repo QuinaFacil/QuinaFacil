@@ -19,6 +19,7 @@ export interface UserInput {
   manager_id?: string;
   phone?: string;
   city?: string;
+  city_id?: string;
   pix_key?: string;
   cpf?: string;
   address?: string;
@@ -28,10 +29,14 @@ export interface UserProfile extends UserInput {
   id: string;
   active: boolean;
   created_at: string;
-  avatar_url?: string;
   manager?: {
     name: string;
   };
+  city_rel?: {
+    name: string;
+    state: string;
+  };
+  avatar_url?: string;
 }
 
 interface UserModalProps {
@@ -40,9 +45,10 @@ interface UserModalProps {
   selectedUser?: UserProfile;
   onSubmit: (data: UserInput) => Promise<{ success: boolean; error?: string }>;
   getGerentes: () => Promise<{ id: string; name: string }[]>;
+  getCities: () => Promise<{ id: string; name: string; state: string }[]>;
 }
 
-export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes }: UserModalProps) {
+export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes, getCities }: UserModalProps) {
   const [loading, setLoading] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{
     isOpen: boolean;
@@ -64,6 +70,7 @@ export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes
     manager_id: selectedUser?.manager_id || '',
     phone: selectedUser?.phone || '',
     city: selectedUser?.city || '',
+    city_id: selectedUser?.city_id || '',
     pix_key: selectedUser?.pix_key || '',
     cpf: selectedUser?.cpf || '',
     address: selectedUser?.address || ''
@@ -78,9 +85,30 @@ export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes
       .replace(/(-\d{2})\d+?$/, '$1');
   };
 
+  const maskPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 10) {
+      return digits
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{4})(\d)/, '$1-$2')
+        .replace(/(-\d{4})\d+?$/, '$1');
+    } else {
+      return digits
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2')
+        .replace(/(-\d{4})\d+?$/, '$1');
+    }
+  };
+
   const { data: gerentes } = useQuery({
     queryKey: ['gerentes-options'],
     queryFn: () => getGerentes(),
+    enabled: isOpen
+  });
+
+  const { data: cities } = useQuery({
+    queryKey: ['cities-options'],
+    queryFn: () => getCities(),
     enabled: isOpen
   });
 
@@ -88,7 +116,15 @@ export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes
     e.preventDefault();
     setLoading(true);
     try {
-      const result = await onSubmit(formData);
+      // Garante que city_id vazio seja enviado como null
+      const submitData = {
+        ...formData,
+        city_id: formData.city_id || undefined
+      };
+      
+      console.log("[UserModal] Submitting data:", submitData);
+      
+      const result = await onSubmit(submitData);
       if (result.success) {
         onClose();
       } else {
@@ -117,11 +153,8 @@ export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes
             </Button>
             <Button
               variant="primary"
-              onClick={(e) => {
-                 const modal = (e.currentTarget as HTMLElement).closest('.antigravity-modal');
-                 const form = modal?.querySelector('form');
-                 if (form) form.requestSubmit();
-              }}
+              type="submit"
+              form="user-form"
               loading={loading}
               icon={Save}
               fullWidth
@@ -132,7 +165,7 @@ export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes
           </Stack>
         }
       >
-        <Stack as="form" onSubmit={handleSubmit} gap={5}>
+        <Stack as="form" id="user-form" onSubmit={handleSubmit} gap={5}>
           <Box padding={0}>
             <Stack gap={4}>
               <InputField
@@ -192,11 +225,21 @@ export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes
           <Box padding={0}>
             <Stack gap={4}>
               {formData.role === 'gerente' && (
-                <InputField
+                <CustomSelect
                   label="Cidade / Região"
-                  placeholder="Ex: São Paulo - SP"
-                  value={formData.city}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, city: e.target.value })}
+                  options={[
+                    { value: '', label: 'Selecione uma cidade' },
+                    ...(cities?.map((c) => ({ value: c.id, label: `${c.name} - ${c.state}` })) || [])
+                  ]}
+                  value={formData.city_id}
+                  onChange={(val: string) => {
+                    const city = cities?.find(c => c.id === val);
+                    setFormData({ 
+                      ...formData, 
+                      city_id: val,
+                      city: city ? `${city.name} - ${city.state}` : '' 
+                    });
+                  }}
                 />
               )}
               <InputField
@@ -211,10 +254,11 @@ export function UserModal({ isOpen, onClose, selectedUser, onSubmit, getGerentes
                 label="Telefone / WhatsApp"
                 placeholder="(00) 00000-0000"
                 value={formData.phone}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone: e.target.value })}
+                maxLength={15}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone: maskPhone(e.target.value) })}
                 required
               />
-              {formData.role !== 'gerente' && (
+              {formData.role !== 'admin' && (
                 <InputField
                   label="Chave PIX (Para comissões)"
                   placeholder="CPF, E-mail ou Celular"

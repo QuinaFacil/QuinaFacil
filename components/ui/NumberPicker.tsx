@@ -53,8 +53,8 @@ export function NumberPicker({
           <Text variant="tiny" className="opacity-60 uppercase italic font-black tracking-widest">{subLabel}</Text>
         </Stack>
 
-        <Grid cols={10} gap={1}>
-          {Array.from({ length: 80 }, (_, i) => i + 1).map((num) => {
+        <Grid cols={5} gap={1}>
+          {Array.from({ length: 25 }, (_, i) => i + 1).map((num) => {
             const isSelected = selectedNumbers.includes(num);
             return (
               <Button
@@ -63,7 +63,7 @@ export function NumberPicker({
                 variant={isSelected ? 'primary' : 'glass'}
                 fullWidth
                 onClick={() => toggleNumber(num)}
-                className={`h-9 p-0 rounded-[5px] text-[10px] font-black italic flex items-center justify-center transition-all
+                className={`h-11 p-0 rounded-[5px] text-sm font-black italic flex items-center justify-center transition-all
                   ${isSelected
                     ? 'shadow-lg shadow-primary-light/30 z-10'
                     : 'btn-number-subtle  hover:opacity-100'}`}

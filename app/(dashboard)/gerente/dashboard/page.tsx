@@ -16,6 +16,9 @@ import { Grid } from '@/components/ui/Grid';
 import { StatCard } from '@/components/ui/StatCard';
 import { Stack } from '@/components/ui/Stack';
 import { Flex } from '@/components/ui/Flex';
+import { Heading } from '@/components/ui/Heading';
+import { Text } from '@/components/ui/Text';
+import { Button } from '@/components/ui/Button';
 import { ListRow } from '@/components/ui/ListRow';
 import { DrawTimer } from '@/components/ui/DrawTimer';
 import { getManagerDashboardStatsAction, type SellerPerformance, type RecentTeamActivity } from './actions';
@@ -48,23 +51,65 @@ export default function GerenteDashboardPage() {
           <Stack gap={10}>
             {/* 01. Monitoramento Ativo */}
             <Section num="01" title="Monitoramento da Equipe">
-              <Grid cols={2} gap={5}>
-                <DrawTimer 
-                  time={stats?.timeRemaining || "--:--"} 
-                  endTime={stats?.endTime || undefined}
-                  progress={stats?.contestProgress || 0}
-                  label="Concurso Ativo"
-                  statusText={`Concurso #${stats?.activeContest?.concurso_numero || '---'}`}
-                />
+              <Stack gap={6}>
+                <Grid cols={2} gap={5}>
+                  <DrawTimer 
+                    time={stats?.timeRemaining || "--:--"} 
+                    endTime={stats?.endTime || undefined}
+                    progress={stats?.contestProgress || 0}
+                    label="Concurso Ativo"
+                    statusText={`Concurso #${stats?.activeContest?.concurso_numero || '---'}`}
+                  />
 
-                <StatCard
-                  label="Vendas da Equipe (Hoje)"
-                  value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats?.teamSalesToday || 0)}
-                  sub={`${stats?.activeSellersCount || 0} vendedores ativos no momento`}
-                  icon={TrendingUp}
-                  bg="glass"
-                />
-              </Grid>
+                  <StatCard
+                    label="Vendas da Equipe (Hoje)"
+                    value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats?.teamSalesToday || 0)}
+                    sub={`${stats?.activeSellersCount || 0} vendedores ativos no momento`}
+                    icon={TrendingUp}
+                    bg="glass"
+                  />
+                </Grid>
+
+                {/* Meta da Campanha - FULL WIDTH */}
+                <Box>
+                  {stats?.goalStats ? (
+                    <StatCard
+                      label="Meta Regional da Campanha"
+                      value={`${stats.goalStats.percentage.toFixed(1)}%`}
+                      sub={stats.goalStats.percentage >= 100 ? "Meta Batida! 🚀" : `Faltam ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.goalStats.target - stats.goalStats.currentNet)}`}
+                      icon={Award}
+                      bg={stats.goalStats.percentage >= 100 ? "success" : "glass"}
+                    />
+                  ) : (
+                    <StatCard
+                      label="Meta Regional da Campanha"
+                      value="---"
+                      sub="Nenhuma meta ativa"
+                      icon={Award}
+                      bg="glass"
+                    />
+                  )}
+                </Box>
+                
+                <Box padding={5} bg="glass" border="glass" className="bg-primary/5 border-primary/20">
+                  <Flex justify="between" align="center">
+                    <Stack gap={1}>
+                      <Text variant="tiny" color="muted">Meu Saldo Disponível</Text>
+                      <Heading level={3} size="xl">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats?.availableBalance || 0)}
+                      </Heading>
+                    </Stack>
+                    <Button 
+                      variant="primary" 
+                      onClick={() => window.location.href = '/gerente/comissao'}
+                      className="shadow-lg shadow-primary/20"
+                      disabled={!stats || stats.availableBalance < 50}
+                    >
+                      {stats && stats.availableBalance < 50 ? "Mínimo R$ 50,00" : "Solicitar Saque"}
+                    </Button>
+                  </Flex>
+                </Box>
+              </Stack>
             </Section>
 
             {/* 02. Indicadores de Rede */}

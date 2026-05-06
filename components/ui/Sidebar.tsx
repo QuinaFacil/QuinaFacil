@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut } from "lucide-react";
+import { LogOut, AlertTriangle } from "lucide-react";
 import Image from 'next/image';
 import { logout } from '@/app/(auth)/login/actions';
 import { Box } from './Box';
@@ -65,6 +65,15 @@ export function Sidebar() {
     await logout();
   };
 
+  const isWeekendAlertActive = React.useMemo(() => {
+    const now = new Date();
+    const day = now.getDay(); // 0: Sun, 1: Mon, 6: Sat
+    const hour = now.getHours();
+    return (day === 6 && hour >= 17) || (day === 0) || (day === 1 && hour < 9);
+  }, []);
+
+  const showWeekendAlert = isWeekendAlertActive && (profile?.role === 'vendedor' || profile?.role === 'gerente');
+
   return (
     <>
       <aside className="w-72 border-r border-glass-border hidden lg:flex flex-col p-6 fixed left-0 top-0 h-screen bg-background z-40 transition-colors duration-300">
@@ -76,11 +85,26 @@ export function Sidebar() {
             </Box>
 
             {/* Navigation */}
-            <nav className="flex flex-col gap-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              {menuItems.map((item, idx) => (
-                <NavItem key={idx} icon={item.icon} label={item.label} href={item.href} />
-              ))}
-            </nav>
+            <Stack gap={4} className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {showWeekendAlert && (
+                <Box className="bg-primary-light/10 border border-primary-light/20 p-3 rounded-[5px] animate-pulse">
+                  <Flex gap={2} align="center">
+                    <AlertTriangle size={16} className="text-primary-light shrink-0" />
+                    <Stack gap={0.5}>
+                      <Text className="text-[9px] font-black italic uppercase text-primary-light" as="span">Prestação de Contas</Text>
+                      <Text className="text-[8px] text-foreground/60 leading-tight" as="span">
+                        Lembre-se de reportar seu fechamento semanal ao gerente responsável.
+                      </Text>
+                    </Stack>
+                  </Flex>
+                </Box>
+              )}
+              <nav className="flex flex-col gap-1.5">
+                {menuItems.map((item, idx) => (
+                  <NavItem key={idx} icon={item.icon} label={item.label} href={item.href} />
+                ))}
+              </nav>
+            </Stack>
           </Stack>
 
           {/* Profile Footer */}

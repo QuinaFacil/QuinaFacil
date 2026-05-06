@@ -36,6 +36,14 @@ export interface ManagerDashboardStats {
   timeRemaining: string;
   endTime: string | null;
   timestamp: string;
+  availableBalance: number;
+  goalStats: {
+    target: number;
+    currentNet: number;
+    percentage: number;
+    profit: number;
+    isPaid: boolean;
+  } | null;
 }
 
 /**
@@ -49,28 +57,43 @@ export async function getManagerDashboardStatsAction(): Promise<ManagerDashboard
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Não autenticado.");
 
-    // 2. Busca o último concurso cadastrado (Teste de visibilidade cego)
-    const { data: activeContest } = await supabase
+    // 2. Busca o perfil e o concurso ativo para a cidade do gerente
+    const { data: profile } = await supabase.from('profiles').select('city_id').eq('id', user.id).single();
+
+    const activeContestQuery = supabase
       .from('concursos')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
 
-    // Cálculo de Tempo e Progresso (Real)
+    if (profile?.city_id) {
+      activeContestQuery.eq('city_id', profile.city_id);
+    }
+
+    const { data: activeContest } = await activeContestQuery.maybeSingle();
+
+    // Cálculo de Tempo e Progresso (Baseado no Horário do Admin)
     let timeRemaining = "--:--";
     let contestProgress = 0;
 
-    if (activeContest) {
-      let endTime: number;
-      if (activeContest.draw_date) {
-        endTime = new Date(activeContest.draw_date).getTime();
-      } else {
-        const fallbackEnd = new Date();
-        fallbackEnd.setHours(17, 0, 0, 0);
-        endTime = fallbackEnd.getTime();
+    // Busca horário de fechamento nas configurações
+    const { data: settings } = await supabase.from('system_settings').select('value').eq('key', 'sales_schedule').maybeSingle();
+    let closeTime = '17:00';
+    if (settings?.value) {
+      try {
+        const schedule = JSON.parse(settings.value);
+        if (schedule.closeTime) closeTime = schedule.closeTime;
+      } catch (e) {
+        console.error("Error parsing sales_schedule:", e);
       }
+    }
 
+    const [closeHour, closeMin] = closeTime.split(':').map(Number);
+    const contestDate = activeContest?.draw_date ? new Date(activeContest.draw_date) : new Date();
+    contestDate.setHours(closeHour, closeMin, 0, 0);
+    const endTime = contestDate.getTime();
+
+    if (activeContest) {
       const start = new Date(activeContest.created_at).getTime();
       const now = new Date().getTime();
       const total = endTime - start;
@@ -94,24 +117,9 @@ export async function getManagerDashboardStatsAction(): Promise<ManagerDashboard
       .select('id, name')
       .eq('manager_id', user.id);
 
-    const teamIds = teamMembers?.map(m => m.id) || [];
+    const teamIds = [user.id, ...(teamMembers?.map(m => m.id) || [])];
 
-    // Se não tiver equipe, retorna dados básicos mas com o concurso
-    if (teamIds.length === 0) {
-      return {
-        teamSalesToday: 0,
-        totalTicketsToday: 0,
-        activeSellersCount: 0,
-        totalTeamSize: 0,
-        recentActivity: [],
-        sellerRanking: [],
-        activeContest: activeContest as ActiveContest | null,
-        contestProgress,
-        timeRemaining,
-        endTime: activeContest ? (activeContest.draw_date || new Date(new Date().setHours(17,0,0,0)).toISOString()) : null,
-        timestamp: new Date().toISOString()
-      };
-    }
+
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -156,18 +164,77 @@ export async function getManagerDashboardStatsAction(): Promise<ManagerDashboard
 
     const totalTicketsToday = teamTicketsToday?.length || 0;
 
+    // 7. Cálculo de Meta (Cidade do Gerente)
+    let goalStats = null;
+    if (activeContest && profile?.city_id) {
+      const { data: goal } = await supabase
+        .from('contest_goals')
+        .select('*')
+        .eq('concurso_id', activeContest.id)
+        .eq('city_id', profile.city_id)
+        .maybeSingle();
+
+      if (goal) {
+        // Vendas totais da CIDADE (Não apenas da equipe do gerente, mas normalmente é 1 gerente por cidade)
+        const { data: citySales } = await supabase
+          .from('tickets')
+          .select('amount')
+          .eq('concurso_id', activeContest.id)
+          .eq('status', 'confirmed');
+
+        const currentNet = citySales?.reduce((acc, t) => acc + Number(t.amount), 0) || 0;
+        const percentage = Math.min((currentNet / goal.target_amount) * 100, 150); // Cap at 150% for UI
+        const profit = currentNet * 0.25; // 25% de lucro para o gerente
+
+        goalStats = {
+          target: Number(goal.target_amount),
+          currentNet,
+          percentage,
+          profit,
+          isPaid: goal.is_paid
+        };
+      }
+    }
+
+    // 8. Saldo Disponível (25% das vendas totais da equipe - Saques)
+    const { data: teamAllTickets } = await supabase
+      .from('tickets')
+      .select('amount')
+      .in('vendedor_id', teamIds)
+      .eq('status', 'confirmed');
+    
+    const totalTeamSales = teamAllTickets?.reduce((acc, t) => acc + Number(t.amount), 0) || 0;
+    const totalEarned = totalTeamSales * 0.25;
+
+    const { data: withdrawals } = await supabase
+      .from('withdrawals')
+      .select('amount, status')
+      .eq('vendedor_id', user.id);
+
+    const totalWithdrawn = withdrawals
+      ?.filter(w => w.status === 'approved')
+      .reduce((acc, w) => acc + Number(w.amount), 0) || 0;
+
+    const pendingWithdrawals = withdrawals
+      ?.filter(w => w.status === 'pending')
+      .reduce((acc, w) => acc + Number(w.amount), 0) || 0;
+
+    const availableBalance = totalEarned - totalWithdrawn - pendingWithdrawals;
+
     return {
       teamSalesToday,
       totalTicketsToday,
       activeSellersCount: activeSellersToday,
-      totalTeamSize: teamIds.length,
+      totalTeamSize: teamMembers?.length || 0,
       recentActivity: (recentActivity as unknown as RecentTeamActivity[]) || [],
       sellerRanking: sellerPerformance,
       activeContest: activeContest as ActiveContest | null,
       contestProgress,
       timeRemaining,
-      endTime: activeContest ? (activeContest.draw_date || new Date(new Date().setHours(17,0,0,0)).toISOString()) : null,
-      timestamp: new Date().toISOString()
+      endTime: new Date(endTime).toISOString(),
+      timestamp: new Date().toISOString(),
+      availableBalance,
+      goalStats
     };
   } catch (error: unknown) {
     console.error("[ERROR] getManagerDashboardStatsAction:", error instanceof Error ? error.message : "Erro desconhecido");

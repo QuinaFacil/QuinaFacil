@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Ticket, CheckCircle2, AlertTriangle, Printer, User, CreditCard, Phone } from 'lucide-react';
+import { Ticket, CheckCircle2, AlertTriangle, User, CreditCard, Phone } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Section } from '@/components/ui/Section';
@@ -14,11 +14,13 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { NumberPicker } from '@/components/ui/NumberPicker';
 import { DigitalTicket } from '@/components/ui/DigitalTicket';
+import { TicketActions } from '@/components/ui/TicketActions';
 import { InputField } from '@/components/ui/InputField';
-import { getOpenContestAction, emitTicketAction, type Contest, type TicketData } from './actions';
+import { getOpenContestAction, emitTicketAction, type Contest, type TicketData, type EmissionConfig } from './actions';
 import { Modal } from '@/components/ui/Modal';
 import { Alert } from '@/components/ui/Alert';
 import { useQueryClient } from '@tanstack/react-query';
+import Image from 'next/image';
 
 const maskCPF = (value: string) => {
   return value
@@ -42,33 +44,66 @@ export default function EmitirBilhetePage() {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [buyerInfo, setBuyerInfo] = useState({ nome: '', cpf: '', telefone: '' });
   const [contest, setContest] = useState<Contest | null>(null);
+  const [, setSettings] = useState<{ key: string; value: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [salesHours, setSalesHours] = useState({ open: '06:00', close: '17:00' });
+  const [sellerName, setSellerName] = useState('');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalStep, setModalStep] = useState<'form' | 'success'>('form');
 
   const [lastTicket, setLastTicket] = useState<TicketData | null>(null);
+  const [goalStats, setGoalStats] = useState<EmissionConfig['goalStats']>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [isSalesOpen, setIsSalesOpen] = useState(true);
 
-  // Carrega o concurso ativo na montagem
+  // Carrega o concurso ativo e configurações na montagem
   useEffect(() => {
-    async function loadContest() {
-      const data = await getOpenContestAction();
-      setContest(data);
-    }
-    loadContest();
+    let interval: NodeJS.Timeout;
 
-    const checkTime = () => {
-      const now = new Date();
-      const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
-      setIsSalesOpen(time >= '06:00' && time < '17:00');
+    async function loadData() {
+      try {
+        const result = await getOpenContestAction();
+
+        setContest(result.contest);
+        setSettings(result.settings);
+        setSellerName(result.sellerName);
+        setGoalStats(result.goalStats);
+
+        const checkTime = () => {
+          const now = new Date();
+          const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
+          const dayOfWeek = now.getDay();
+
+          const scheduleJson = result.settings?.find(s => s.key === 'sales_schedule')?.value;
+          const schedule = scheduleJson ? JSON.parse(scheduleJson) : null;
+
+          if (schedule) {
+            setSalesHours({ open: schedule.openTime, close: schedule.closeTime });
+            const isDayActive = schedule.activeDays.includes(dayOfWeek);
+            const isTimeActive = time >= schedule.openTime && time < schedule.closeTime;
+            setIsSalesOpen(isDayActive && isTimeActive);
+          } else {
+            const openingTime = result.settings?.find(s => s.key === 'opening_time')?.value || '06:00';
+            const closingTime = result.settings?.find(s => s.key === 'closing_time')?.value || '17:00';
+            setSalesHours({ open: openingTime, close: closingTime });
+            setIsSalesOpen(time >= openingTime && time < closingTime);
+          }
+        };
+
+        checkTime();
+        interval = setInterval(checkTime, 30000);
+      } catch (err) {
+        console.error("Error loading emission data:", err);
+      }
+    }
+
+    loadData();
+    return () => {
+      if (interval) clearInterval(interval);
     };
-    checkTime();
-    const interval = setInterval(checkTime, 30000); // Check every 30s
-    return () => clearInterval(interval);
   }, []);
 
   const openEmissionModal = () => {
@@ -103,10 +138,6 @@ export default function EmitirBilhetePage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const isReady = selectedNumbers.length === 5 && contest;
 
   return (
@@ -117,7 +148,7 @@ export default function EmitirBilhetePage() {
           description="Selecione as dezenas e gere o comprovante de aposta oficial."
         >
           {!isSalesOpen ? (
-            <Badge variant="error" dot icon={AlertTriangle}>VENDAS ENCERRADAS (17h - 06h)</Badge>
+            <Badge variant="error" dot icon={AlertTriangle}>VENDAS ENCERRADAS ({salesHours.close}h - {salesHours.open}h)</Badge>
           ) : contest ? (
             <Badge variant="success" dot icon={CheckCircle2}>CAMPANHA ATIVA: #{contest.concurso_numero}</Badge>
           ) : (
@@ -125,15 +156,73 @@ export default function EmitirBilhetePage() {
           )}
         </PageHeader>
 
+        {(goalStats || lastTicket) && (
+          <Box bg="glass" padding={6} rounded="md" border="glass" className="w-full">
+            <Flex align="center" justify="between" gap={8} className="flex-wrap md:flex-nowrap">
+              {/* LADO ESQUERDO: ÚLTIMO BILHETE (Ordem Invertida) */}
+              {lastTicket ? (
+                <Stack gap={3}>
+                  <Text variant="tiny" weight="black" color="primary" transform="uppercase" italic opacity={0.6}>Último Bilhete Emitido</Text>
+                  <Flex gap={2}>
+                    {lastTicket.numbers.map((n, i) => (
+                      <Flex 
+                        key={i} 
+                        align="center"
+                        justify="center"
+                        className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-primary-light/30 bg-primary-light/5 shadow-[0_0_15px_rgba(56,189,248,0.1)]"
+                      >
+                        <Text weight="black" color="primary" size="lg">{n.toString().padStart(2, '0')}</Text>
+                      </Flex>
+                    ))}
+                  </Flex>
+                </Stack>
+              ) : (
+                <Box className="flex-1" />
+              )}
+
+              {/* LADO DIREITO: PROGRESSO DA META */}
+              {goalStats && (
+                <Stack gap={2} className="w-full md:max-w-md">
+                  <Flex justify="between" align="baseline" gap={4}>
+                    <Text variant="tiny" weight="black" color="primary" transform="uppercase" italic>Progresso da Meta</Text>
+                    <Text weight="black" size="xl" color="white" className="tabular-nums">
+                      {goalStats.percentage.toFixed(1)}%
+                    </Text>
+                  </Flex>
+                  
+                  <Box bg="none" rounded="full" className="h-2 w-full overflow-hidden border border-white/5 bg-white/5">
+                    <Box 
+                      className={`h-full transition-all duration-1000 ${goalStats.isPaid ? 'bg-brand-success' : 'bg-primary-light shadow-[0_0_10px_rgba(56,189,248,0.5)]'}`}
+                      style={{ width: `${Math.min(goalStats.percentage, 100)}%` }}
+                    />
+                  </Box>
+
+                  <Flex justify="between" align="center">
+                    <Text variant="tiny" weight="bold" transform="uppercase" opacity={0.4}>
+                      {goalStats.isPaid ? 'Meta Batida' : 'Faltam para Meta:'}
+                    </Text>
+                    <Text weight="black" size="sm" color={goalStats.isPaid ? 'success' : 'white'}>
+                      {goalStats.isPaid 
+                        ? `Lucro: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(goalStats.profit)}`
+                        : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.max(goalStats.target - goalStats.currentNet, 0))
+                      }
+                    </Text>
+                  </Flex>
+                </Stack>
+              )}
+            </Flex>
+          </Box>
+        )}
+
         <Section>
           <Stack gap={8}>
             {contest?.banner_url && (
               <Box padding={0} className="w-full h-48 md:h-72 rounded-[5px] overflow-hidden border border-white/5 relative group shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={contest.banner_url} 
-                  alt="Banner da Campanha" 
-                  className="w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105" 
+                <Image
+                  src={contest.banner_url}
+                  alt="Banner da Campanha"
+                  fill
+                  className="object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
                 />
                 <Box className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 {contest.description && (
@@ -147,78 +236,83 @@ export default function EmitirBilhetePage() {
             )}
 
             <Grid cols={1} gap={12} className={contest ? "lg:grid-cols-2 lg:items-start" : "w-full"}>
-            {/* Coluna 01: O Volante */}
-            <Stack gap={8}>
-              {contest ? (
-                <NumberPicker
-                  num="1"
-                  label="Escolha os Números"
-                  subLabel="Selecione exatamente 5 dezenas"
-                  maxSelections={5}
-                  selectedNumbers={selectedNumbers}
-                  onSelectionChange={setSelectedNumbers}
-                />
-              ) : (
-                <EmptyState 
-                  icon={AlertTriangle} 
-                  description="Não há nenhuma campanha ativa no momento." 
-                  minHeight={300}
-                  variant="error"
-                />
-              )}
+              <Stack gap={8}>
+                {contest ? (
+                  <NumberPicker
+                    num="1"
+                    label="Escolha os Números"
+                    subLabel="Selecione exatamente 5 dezenas"
+                    maxSelections={5}
+                    selectedNumbers={selectedNumbers}
+                    onSelectionChange={setSelectedNumbers}
+                  />
+                ) : (
+                  <EmptyState
+                    icon={AlertTriangle}
+                    description="Não há nenhuma campanha ativa no momento."
+                    minHeight={300}
+                    variant="error"
+                  />
+                )}
+
+                {contest && (
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    size="lg"
+                    icon={Ticket}
+                    disabled={!isReady || !isSalesOpen}
+                    onClick={openEmissionModal}
+                  >
+                    {!isSalesOpen ? `Vendas Encerradas (${salesHours.close}h - ${salesHours.open}h)` : isReady ? "Avançar para Emissão" : "Selecione 5 números"}
+                  </Button>
+                )}
+              </Stack>
 
               {contest && (
-                <Button
-                  variant="primary"
-                  fullWidth
-                  size="lg"
-                  icon={Ticket}
-                  disabled={!isReady || !isSalesOpen}
-                  onClick={openEmissionModal}
-                >
-                  {!isSalesOpen ? "Vendas Encerradas (17h-06h)" : isReady ? "Avançar para Emissão" : "Selecione 5 números"}
-                </Button>
-              )}
-            </Stack>
+                <Stack gap={6}>
+                  <Box padding={0} className="relative h-[413px] overflow-y-auto overflow-x-hidden border border-white/5 rounded-[5px] bg-black/10 custom-scrollbar">
+                    <Box className="absolute left-1/2 -translate-x-1/2 z-20 top-4">
+                      <Badge variant="info" className="shadow-lg">PREVIEW</Badge>
+                    </Box>
 
-            {/* Coluna 02: O Bilhete (Visualização) */}
-            {contest && (
-              <Stack gap={6}>
-                <Box padding={0} className="relative h-[492px] overflow-y-auto overflow-x-hidden border border-white/5 rounded-[5px] bg-black/10 custom-scrollbar">
-                  <Box className="absolute left-1/2 -translate-x-1/2 z-20 top-4">
-                    <Badge variant="info" className="shadow-lg">PREVIEW</Badge>
+                    <Flex align="start" justify="center" className="p-10 w-full h-full">
+                      <Box className="origin-top scale-[0.85]">
+                        <DigitalTicket
+                          id="preview-ticket"
+                          auditId="AGUARDANDO..."
+                          dateTime={new Date().toLocaleString('pt-BR')}
+                          contest={contest ? `#${contest.concurso_numero}` : "---"}
+                          vendedorNome={sellerName}
+                          showActions={false}
+                          prizeInfo={{
+                            amount: contest?.prize_amount,
+                            description: contest?.description
+                          }}
+                          numbers={(() => {
+                            const nums = [...selectedNumbers];
+                            while (nums.length < 5) nums.push(0);
+                            return nums.slice(0, 5);
+                          })()}
+                        />
+                      </Box>
+                    </Flex>
                   </Box>
 
-                  <Flex align="start" justify="center" className="p-10 w-full h-full">
-                    <Box className="origin-top scale-[0.85]">
-                      <DigitalTicket
-                        auditId="AGUARDANDO..."
-                        dateTime={new Date().toLocaleString('pt-BR')}
-                        contest={contest ? `#${contest.concurso_numero}` : "---"}
-                        numbers={(() => {
-                          const nums = [...selectedNumbers];
-                          while (nums.length < 5) nums.push(0);
-                          return nums.slice(0, 5);
-                        })()}
-                      />
-                    </Box>
-                  </Flex>
-                </Box>
-
-                <Alert variant="info">
-                  A emissão do bilhete gera uma comissão imediata de 20%. Verifique as dezenas com o cliente antes de avançar.
-                </Alert>
-              </Stack>
-            )}
+                  <Alert variant="info">
+                    A emissão do bilhete gera uma comissão imediata de 20%. Verifique as dezenas com o cliente antes de avançar.
+                  </Alert>
+                </Stack>
+              )}
             </Grid>
           </Stack>
         </Section>
       </Stack>
 
-      {/* Versão de Impressão (Sempre visível para o window.print()) */}
       {lastTicket && (
-        <Box className="hidden print:block">
+        <Box className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none print:opacity-100 print:visible print:z-[9999] print:bg-white">
           <DigitalTicket
+            id="printable-ticket"
             auditId={lastTicket.serial_number}
             dateTime={new Date(lastTicket.created_at).toLocaleString('pt-BR')}
             contest={contest ? `#${contest.concurso_numero}` : "---"}
@@ -227,19 +321,23 @@ export default function EmitirBilhetePage() {
               cpf: lastTicket.comprador_cpf || '',
               telefone: lastTicket.comprador_telefone || ''
             }}
+            vendedorNome={sellerName}
             numbers={lastTicket.numbers}
+            prizeInfo={{
+              amount: contest?.prize_amount,
+              description: contest?.description
+            }}
           />
         </Box>
       )}
 
-      {/* Modal de Emissão (Multi-step: Form -> Success) */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
           if (!loading) {
             setIsModalOpen(false);
             if (modalStep === 'success') {
-              setBuyerInfo({ nome: '', cpf: '', telefone: '' }); // Limpa o form ao fechar o sucesso
+              setBuyerInfo({ nome: '', cpf: '', telefone: '' });
             }
           }
         }}
@@ -258,26 +356,7 @@ export default function EmitirBilhetePage() {
               {loading ? "Processando..." : "Confirmar"}
             </Button>
           ) : (
-            <Flex gap={3} className="w-full">
-              <Button
-                variant="glass"
-                fullWidth
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setBuyerInfo({ nome: '', cpf: '', telefone: '' });
-                }}
-              >
-                Fechar
-              </Button>
-              <Button
-                variant="primary"
-                fullWidth
-                icon={Printer}
-                onClick={handlePrint}
-              >
-                Imprimir
-              </Button>
-            </Flex>
+            <TicketActions serialNumber={lastTicket?.serial_number || ''} />
           )
         }
       >

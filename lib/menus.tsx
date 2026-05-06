@@ -2,7 +2,7 @@ import React from 'react';
 import {
   TrendingUp, Ticket, Wallet, Users,
   FileText, ShieldAlert, Trophy, User,
-  Hash, BarChart3, Clock
+  Hash, BarChart3, Clock, MapPin
 } from "lucide-react";
 
 export interface MenuItem {
@@ -17,6 +17,7 @@ export const ADMIN_MENU: MenuItem[] = [
   { icon: <Users size={18} />, label: "Usuários", href: "/admin/usuarios" },
   { icon: <ShieldAlert size={18} />, label: "Logs", href: "/admin/logs" },
   { icon: <Hash size={18} />, label: "Campanhas", href: "/admin/concursos" },
+  { icon: <MapPin size={18} />, label: "Cidades", href: "/admin/cidades" },
   { icon: <Trophy size={18} />, label: "Vencedores", href: "/admin/vencedores" },
   { icon: <Wallet size={18} />, label: "Solicitações de Saque", href: "/admin/saques" },
   { icon: <Ticket size={18} />, label: "Tickets Emitidos", href: "/admin/tickets" },
