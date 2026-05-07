@@ -21,6 +21,8 @@ import { Modal } from '@/components/ui/Modal';
 import { Alert } from '@/components/ui/Alert';
 import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
+import { isSalesOpenStatic } from '@/utils/sales';
+
 
 const maskCPF = (value: string) => {
   return value
@@ -44,9 +46,9 @@ export default function EmitirBilhetePage() {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [buyerInfo, setBuyerInfo] = useState({ nome: '', cpf: '', telefone: '' });
   const [contest, setContest] = useState<Contest | null>(null);
-  const [, setSettings] = useState<{ key: string; value: string }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [salesHours, setSalesHours] = useState({ open: '06:00', close: '17:00' });
+
+
   const [sellerName, setSellerName] = useState('');
 
   // Modal State
@@ -68,30 +70,15 @@ export default function EmitirBilhetePage() {
         const result = await getOpenContestAction();
 
         setContest(result.contest);
-        setSettings(result.settings);
         setSellerName(result.sellerName);
+
         setGoalStats(result.goalStats);
 
         const checkTime = () => {
-          const now = new Date();
-          const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
-          const dayOfWeek = now.getDay();
-
-          const scheduleJson = result.settings?.find(s => s.key === 'sales_schedule')?.value;
-          const schedule = scheduleJson ? JSON.parse(scheduleJson) : null;
-
-          if (schedule) {
-            setSalesHours({ open: schedule.openTime, close: schedule.closeTime });
-            const isDayActive = schedule.activeDays.includes(dayOfWeek);
-            const isTimeActive = time >= schedule.openTime && time < schedule.closeTime;
-            setIsSalesOpen(isDayActive && isTimeActive);
-          } else {
-            const openingTime = result.settings?.find(s => s.key === 'opening_time')?.value || '06:00';
-            const closingTime = result.settings?.find(s => s.key === 'closing_time')?.value || '17:00';
-            setSalesHours({ open: openingTime, close: closingTime });
-            setIsSalesOpen(time >= openingTime && time < closingTime);
-          }
+          const { isOpen } = isSalesOpenStatic();
+          setIsSalesOpen(isOpen);
         };
+
 
         checkTime();
         interval = setInterval(checkTime, 30000);
@@ -148,7 +135,7 @@ export default function EmitirBilhetePage() {
           description="Selecione as dezenas e gere o comprovante de aposta oficial."
         >
           {!isSalesOpen ? (
-            <Badge variant="error" dot icon={AlertTriangle}>VENDAS ENCERRADAS ({salesHours.close}h - {salesHours.open}h)</Badge>
+            <Badge variant="error" dot icon={AlertTriangle}>VENDAS ENCERRADAS (SÁB 17h às SEG 07h)</Badge>
           ) : contest ? (
             <Badge variant="success" dot icon={CheckCircle2}>CAMPANHA ATIVA: #{contest.concurso_numero}</Badge>
           ) : (
@@ -264,7 +251,8 @@ export default function EmitirBilhetePage() {
                     disabled={!isReady || !isSalesOpen}
                     onClick={openEmissionModal}
                   >
-                    {!isSalesOpen ? `Vendas Encerradas (${salesHours.close}h - ${salesHours.open}h)` : isReady ? "Avançar para Emissão" : "Selecione 5 números"}
+                    {!isSalesOpen ? `Vendas Encerradas` : isReady ? "Avançar para Emissão" : "Selecione 5 números"}
+
                   </Button>
                 )}
               </Stack>

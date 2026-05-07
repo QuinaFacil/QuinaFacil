@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { AuditService } from "@/services/AuditService";
+import { isSalesOpenStatic } from "@/utils/sales";
 
 export interface Contest {
   id: string;
@@ -30,8 +31,8 @@ export interface TicketData {
 
 export interface EmissionConfig {
   contest: Contest | null;
-  settings: { key: string; value: string }[];
   sellerName: string;
+
   goalStats: {
     target: number;
     currentNet: number;
@@ -49,7 +50,8 @@ export async function getOpenContestAction(): Promise<EmissionConfig> {
 
   // 1. Identifica a cidade do vendedor
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { contest: null, settings: [], sellerName: '', goalStats: null };
+  if (!user) return { contest: null, sellerName: '', goalStats: null };
+
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
@@ -59,27 +61,26 @@ export async function getOpenContestAction(): Promise<EmissionConfig> {
 
   if (profileError || !profile?.city_id) {
     console.error("[GET_OPEN_CONTEST] Profile error:", profileError);
-    return { contest: null, settings: [], sellerName: '', goalStats: null };
+    return { contest: null, sellerName: '', goalStats: null };
   }
 
-  // 2. Busca o concurso aberto para esta cidade e as configurações em paralelo
-  const [contestResponse, settingsResponse] = await Promise.all([
-    supabase
+
+  // 2. Busca o concurso aberto para esta cidade
+  const { data: contestData, error: contestError } = await supabase
       .from('concursos')
       .select('*')
       .eq('status', 'open')
       .eq('city_id', profile.city_id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single(),
-    supabase.from('system_settings').select('key, value')
-  ]);
+      .single();
 
-  if (contestResponse.error && contestResponse.error.code !== 'PGRST116') {
-    console.error("[GET_OPEN_CONTEST] Contest error:", contestResponse.error);
+  if (contestError && contestError.code !== 'PGRST116') {
+    console.error("[GET_OPEN_CONTEST] Contest error:", contestError);
   }
 
-  const contest = contestResponse.data as unknown as Contest;
+  const contest = contestData as unknown as Contest;
+
   let goalStats = null;
 
   if (contest) {
@@ -106,10 +107,10 @@ export async function getOpenContestAction(): Promise<EmissionConfig> {
 
   return {
     contest: contest as unknown as Contest || null,
-    settings: settingsResponse.data || [],
     sellerName: profile.name || '',
     goalStats
   };
+
 }
 
 /**
@@ -130,43 +131,19 @@ export async function emitTicketAction(
   
   if (!profile?.city_id) throw new Error("Vendedor não possui cidade vinculada.");
 
-  const [{ data: contest }, { data: settings }] = await Promise.all([
-    supabase.from('concursos')
+  const { data: contest } = await supabase.from('concursos')
       .select('id, concurso_numero')
       .eq('status', 'open')
       .eq('city_id', profile.city_id)
-      .single(),
-    supabase.from('system_settings').select('key, value')
-  ]);
+      .single();
 
-  const now = new Date();
-  const currentStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const dayOfWeek = now.getDay(); // 0-6 (Domingo-Sábado)
 
-  const scheduleJson = settings?.find(s => s.key === 'sales_schedule')?.value;
-  const schedule = scheduleJson ? JSON.parse(scheduleJson) : null;
+  const { isOpen, reason } = isSalesOpenStatic();
 
-  if (schedule && schedule.activeDays) {
-    const isDayActive = schedule.activeDays.includes(dayOfWeek);
-    const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    const currentDayName = dayNames[dayOfWeek];
-
-    if (!isDayActive) {
-      throw new Error(`Vendas encerradas hoje (${currentDayName}).`);
-    }
-
-    if (currentStr < schedule.openTime || currentStr >= schedule.closeTime) {
-      throw new Error(`Vendas encerradas. Horário: ${schedule.openTime} às ${schedule.closeTime}.`);
-    }
-  } else {
-    // Fallback para o sistema rudimentar antigo se o novo não estiver configurado
-    const openingTime = settings?.find(s => s.key === 'opening_time')?.value || '06:00';
-    const closingTime = settings?.find(s => s.key === 'closing_time')?.value || '17:00';
-
-    if (currentStr < openingTime || currentStr >= closingTime) {
-      throw new Error(`Vendas encerradas. Horário padrão: ${openingTime} às ${closingTime}.`);
-    }
+  if (!isOpen) {
+    throw new Error(reason || "Vendas encerradas no momento.");
   }
+
 
   if (!contest) throw new Error("Não há concursos abertos para apostas no momento.");
 

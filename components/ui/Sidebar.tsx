@@ -69,8 +69,10 @@ export function Sidebar() {
     const now = new Date();
     const day = now.getDay(); // 0: Sun, 1: Mon, 6: Sat
     const hour = now.getHours();
-    return (day === 6 && hour >= 17) || (day === 0) || (day === 1 && hour < 9);
+    // Alerta de fechamento: Sábado após 17h, Domingo o dia todo, Segunda antes das 07h
+    return (day === 6 && hour >= 17) || (day === 0) || (day === 1 && hour < 7);
   }, []);
+
 
   const showWeekendAlert = isWeekendAlertActive && (profile?.role === 'vendedor' || profile?.role === 'gerente');
 

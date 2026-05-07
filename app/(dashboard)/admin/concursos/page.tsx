@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/Button';
 import { Flex } from '@/components/ui/Flex';
 import { ConcursoList } from '@/components/ui/ConcursoList';
 import { ConcursoModal } from '@/components/ui/ConcursoModal';
-import { SalesScheduleModal } from '@/components/ui/SalesScheduleModal';
-import { Settings, Trophy } from 'lucide-react';
+import { Trophy } from 'lucide-react';
+
 import type { Concurso } from '@/types/lottery';
 
 export default function AdminConcursosPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+
   const [selectedConcurso, setSelectedConcurso] = React.useState<Concurso | null>(null);
 
   const handleEdit = (concurso: Concurso, forceStatus?: string) => {
@@ -41,13 +42,7 @@ export default function AdminConcursosPage() {
         title="Histórico de Campanhas"
         action={
           <Flex gap={3} className="w-full lg:w-auto">
-            <Button 
-              variant="glass" 
-              icon={Settings} 
-              onClick={() => setIsSettingsOpen(true)}
-              className="lg:w-14"
-              title="Configurações de Horário"
-            />
+
             <Button 
               variant="primary" 
               icon={Trophy} 
@@ -74,10 +69,7 @@ export default function AdminConcursosPage() {
         }}
         selectedConcurso={selectedConcurso}
       />
-      <SalesScheduleModal 
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-      />
+
     </>
   );
 }
