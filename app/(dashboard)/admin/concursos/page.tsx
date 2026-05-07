@@ -13,7 +13,7 @@ import type { Concurso } from '@/types/lottery';
 
 export default function AdminConcursosPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+
 
   const [selectedConcurso, setSelectedConcurso] = React.useState<Concurso | null>(null);
 
