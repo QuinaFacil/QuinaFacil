@@ -14,10 +14,19 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Trophy, Edit2, Trash2, Play, Hash, Loader2, RefreshCcw } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 
+interface ConcursoWithStats extends Concurso {
+  ticket_count?: number;
+  sales_gross?: number;
+  sales_net?: number;
+  goal_percentage: number;
+  is_paid: boolean;
+  profit: number;
+}
+
 interface ConcursoListProps {
   onEdit: (concurso: Concurso) => void;
   onLaunchResult: (concurso: Concurso) => void;
-  initialData?: Concurso[];
+  initialData?: ConcursoWithStats[];
   isLoading?: boolean;
 }
 
@@ -94,6 +103,7 @@ export function ConcursoList({ onEdit, onLaunchResult, initialData, isLoading: p
   }
 
   return (
+    <>
       <Stack gap={4}>
         {error && (
           <Box padding={4} bg="glass" border="glass" className="border-red-500/50 bg-red-500/10">

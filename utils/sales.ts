@@ -9,7 +9,6 @@ export function isSalesOpenStatic(): { isOpen: boolean; reason?: string } {
   const now = new Date();
   const day = now.getDay(); // 0: Domingo, 1: Segunda, ..., 6: Sábado
   const hour = now.getHours();
-  const minute = now.getMinutes();
 
   // Domingo: Fechado
   if (day === 0) {

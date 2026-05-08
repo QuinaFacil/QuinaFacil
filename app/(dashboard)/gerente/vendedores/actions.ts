@@ -68,7 +68,7 @@ export async function getSellersAction() {
       return {
         ...profile,
         email: authUsers.find(u => u.id === profile.id)?.email,
-        city: (profile.city as any)?.name || 'Regional'
+        city: profile.city?.name || 'Regional'
       };
     });
 

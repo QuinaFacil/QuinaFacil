@@ -140,7 +140,7 @@ export default function VendaPublicaPage() {
               <Text color="muted">
                 {errorMsg || "Não foi possível carregar as informações deste vendedor."}
               </Text>
-              <Text variant="tiny" color="muted" className="opacity-50">ID: {vendedorId}</Text>
+              <Text variant="tiny" color="muted">ID: {vendedorId}</Text>
             </Stack>
             <Button variant="glass" onClick={() => window.location.reload()}>Tentar Novamente</Button>
           </Stack>

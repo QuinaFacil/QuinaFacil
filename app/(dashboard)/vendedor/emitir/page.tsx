@@ -16,7 +16,7 @@ import { NumberPicker } from '@/components/ui/NumberPicker';
 import { DigitalTicket } from '@/components/ui/DigitalTicket';
 import { TicketActions } from '@/components/ui/TicketActions';
 import { InputField } from '@/components/ui/InputField';
-import { getOpenContestAction, emitTicketAction, type Contest, type TicketData, type EmissionConfig } from './actions';
+import { getOpenContestAction, emitTicketAction, type Contest, type TicketData } from './actions';
 import { Modal } from '@/components/ui/Modal';
 import { Alert } from '@/components/ui/Alert';
 import { useQueryClient } from '@tanstack/react-query';
@@ -56,7 +56,6 @@ export default function EmitirBilhetePage() {
   const [modalStep, setModalStep] = useState<'form' | 'success'>('form');
 
   const [lastTicket, setLastTicket] = useState<TicketData | null>(null);
-  const [goalStats, setGoalStats] = useState<EmissionConfig['goalStats']>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [isSalesOpen, setIsSalesOpen] = useState(true);
@@ -71,8 +70,6 @@ export default function EmitirBilhetePage() {
 
         setContest(result.contest);
         setSellerName(result.sellerName);
-
-        setGoalStats(result.goalStats);
 
         const checkTime = () => {
           const { isOpen } = isSalesOpenStatic();
