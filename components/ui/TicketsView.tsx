@@ -157,7 +157,7 @@ export function TicketsView() {
                     {canDelete && (
                       <Button
                         variant="glass"
-                        size="icon-sm"
+                        size="icon"
                         icon={Trash2}
                         className="text-error border-error/10 hover:bg-error/10"
                         onClick={(e) => {
