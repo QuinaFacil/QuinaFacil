@@ -61,27 +61,44 @@ export async function getActiveContestAction(vendedorId: string) {
     }
 
     // 2. Busca concurso aberto (prioriza cidade do vendedor, senão pega a última aberta)
-    let contestQuery = supabase.from('concursos')
+    let { data: contest, error: contestError } = await supabase.from('concursos')
         .select(`
           id, 
           concurso_numero, 
           banner_url, 
           description,
+          prize_amount,
           city:cities (name)
         `)
-        .eq('status', 'open');
-
-    if (profile?.city_id) {
-      contestQuery = contestQuery.eq('city_id', profile.city_id);
-    }
-
-    const [{ data: contest, error: contestError }, { data: settings }] = await Promise.all([
-      contestQuery
+        .eq('status', 'open')
+        .eq('city_id', profile?.city_id)
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle(),
-      supabase.from('system_settings').select('key, value').eq('key', 'sales_schedule').maybeSingle()
-    ]);
+        .maybeSingle();
+
+    // Fallback: Se não achou na cidade, tenta um concurso global (sem city_id)
+    if (!contest && profile?.city_id) {
+        const { data: globalContest, error: globalError } = await supabase.from('concursos')
+            .select(`
+              id, 
+              concurso_numero, 
+              banner_url, 
+              description,
+              prize_amount,
+              city:cities (name)
+            `)
+            .eq('status', 'open')
+            .is('city_id', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+            
+        if (!globalError && globalContest) {
+            contest = globalContest;
+        }
+    }
+
+    const { data: settings } = await supabase.from('system_settings').select('key, value').eq('key', 'sales_schedule').maybeSingle();
 
     if (contestError) {
       console.error("[getActiveContestAction] Contest query error:", contestError.message);

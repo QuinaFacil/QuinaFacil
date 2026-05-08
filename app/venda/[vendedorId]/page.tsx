@@ -44,6 +44,7 @@ export default function VendaPublicaPage() {
     banner_url?: string; 
     description?: string;
     cityName?: string;
+    prize_amount?: number;
     schedule: { openTime: string; closeTime: string; activeDays: number[] }
   } | null>(null);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
@@ -114,6 +115,8 @@ export default function VendaPublicaPage() {
     if (result.success) {
       setLastTicket(result.ticket);
       setStep('success');
+    } else {
+      setErrorMsg(result.error || "Erro ao registrar aposta. Tente novamente.");
     }
     setLoading(false);
   };
@@ -267,10 +270,10 @@ export default function VendaPublicaPage() {
                         size="lg"
                         fullWidth
                         icon={Send}
-                        disabled={isClosed || selectedNumbers.length !== 5 || !buyerInfo.nome || loading}
+                        disabled={isClosed || selectedNumbers.length !== 5 || !buyerInfo.nome || loading || !contest?.id}
                         onClick={handleSubmit}
                       >
-                        {loading ? "Processando..." : isClosed ? "Campanha Indisponível" : "Enviar Jogo para Validação"}
+                        {loading ? "Processando..." : isClosed ? "Campanha Indisponível" : !contest?.id ? "Nenhum sorteio disponível" : "Enviar Jogo para Validação"}
                       </Button>
 
                       <Text variant="tiny" color="muted" className="text-center">
@@ -317,6 +320,10 @@ export default function VendaPublicaPage() {
                     contest={contest ? `#${contest.concurso_numero}` : "---"}
                     numbers={lastTicket.numbers}
                     buyer={buyerInfo}
+                    prizeInfo={{
+                      amount: contest?.prize_amount,
+                      description: contest?.description
+                    }}
                   />
                 )}
               </Box>

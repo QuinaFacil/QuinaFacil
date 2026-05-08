@@ -20,22 +20,27 @@ export default function AdminVencedoresPage() {
   const { data: concursos, isLoading: loadingConcursos } = useQuery({
     queryKey: ['finished-concursos'],
     queryFn: () => getFinishedConcursosAction(),
-    refetchInterval: 3000
+    refetchInterval: 3000,
+    refetchOnMount: 'always',
+    staleTime: 0
   });
 
-  const { data: winners, isLoading: loadingWinners } = useQuery({
+  const { data: winners, isLoading: loadingWinners, refetch: refetchWinners } = useQuery({
     queryKey: ['winners', selectedId],
     queryFn: () => selectedId ? getWinnersByConcursoAction(selectedId) : null,
     enabled: !!selectedId,
-    refetchInterval: 3000, // Atualiza a cada 3 segundos
-    refetchOnWindowFocus: true
+    refetchInterval: 2000,
+    refetchOnWindowFocus: true,
+    staleTime: 0
   });
 
   // Pega o concurso selecionado para mostrar os números
   const selectedConcurso = concursos?.find(c => c.id === selectedId);
 
   const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['finished-concursos'] });
     queryClient.invalidateQueries({ queryKey: ['winners', selectedId] });
+    refetchWinners();
   };
 
   return (
