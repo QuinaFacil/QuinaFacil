@@ -53,6 +53,7 @@ export default function VendaPublicaPage() {
   const [lastTicket, setLastTicket] = useState<{ serial_number: string; numbers: number[] } | null>(null);
   const [isClosed, setIsClosed] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!contest?.schedule) return;
@@ -85,10 +86,20 @@ export default function VendaPublicaPage() {
           getSellerInfoAction(vendedorId),
           getActiveContestAction(vendedorId)
         ]);
-        setSeller(s);
-        setContest(c);
+        
+        if (!s) {
+          setErrorMsg("Vendedor não encontrado ou inativo.");
+          setSeller(null);
+        } else {
+          setSeller(s);
+          setContest(c);
+          if (!c?.schedule) {
+            setErrorMsg("Não há campanhas ativas para este vendedor no momento.");
+          }
+        }
       } catch (err) {
         console.error("Error loading sales data:", err);
+        setErrorMsg("Erro de conexão. Tente novamente.");
       } finally {
         setInitialLoading(false);
       }
@@ -127,9 +138,9 @@ export default function VendaPublicaPage() {
             <Stack gap={2}>
               <Heading level={2} size="xl">Vendedor Indisponível</Heading>
               <Text color="muted">
-                Não foi possível carregar as informações deste vendedor. 
-                Verifique se o link está correto ou tente novamente mais tarde.
+                {errorMsg || "Não foi possível carregar as informações deste vendedor."}
               </Text>
+              <Text variant="tiny" color="muted" className="opacity-50">ID: {vendedorId}</Text>
             </Stack>
             <Button variant="glass" onClick={() => window.location.reload()}>Tentar Novamente</Button>
           </Stack>
@@ -151,7 +162,7 @@ export default function VendaPublicaPage() {
             <Stack gap={1}>
               <Heading level={1} size="3xl">FAÇA SUA APOSTA</Heading>
               <Text variant="description" color="primary" weight="bold">
-                Vendedor: {seller.name} • {seller.city}
+                Vendedor: {seller.name} {seller.city && `• ${seller.city}`}
               </Text>
               {contest.id && (
                 <Text variant="tiny" color="muted">

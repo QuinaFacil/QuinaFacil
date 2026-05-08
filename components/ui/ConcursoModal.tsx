@@ -49,12 +49,34 @@ function ConcursoForm({
     goal_indicator_active: true
   });
 
+  const { data: profile } = useQuery({
+    queryKey: ['current-user-profile'],
+    queryFn: async () => {
+      const { createClient } = await import('@/utils/supabase/client');
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data } = await supabase.from('profiles').select('role, city_id').eq('id', user.id).single();
+      return data;
+    }
+  });
+
+  const isManager = profile?.role === 'gerente';
+
   const { data: cities } = useQuery({
     queryKey: ['cities-list'],
-    queryFn: () => getCitiesListAction()
+    queryFn: () => getCitiesListAction(),
+    enabled: !isManager // No need to fetch cities for managers
   });
 
   const cityOptions = (cities?.map(c => ({ value: c.id, label: c.name })) || []);
+
+  // Update city_id if manager and not set
+  React.useEffect(() => {
+    if (isManager && profile?.city_id && !formData.city_id) {
+      setFormData(prev => ({ ...prev, city_id: profile.city_id }));
+    }
+  }, [isManager, profile, formData.city_id]);
 
   const maskCurrency = (value: string) => {
     const cleanValue = value.replace(/\D/g, "");
@@ -172,12 +194,14 @@ function ConcursoForm({
               placeholder="Descreva as regras ou detalhes deste sorteio..."
             />
 
-            <CustomSelect
-              label="Cidade Abrangente"
-              options={cityOptions}
-              value={formData.city_id}
-              onChange={(val) => setFormData({ ...formData, city_id: val })}
-            />
+            {!isManager && (
+              <CustomSelect
+                label="Cidade Abrangente"
+                options={cityOptions}
+                value={formData.city_id}
+                onChange={(val) => setFormData({ ...formData, city_id: val })}
+              />
+            )}
             <InputField
               label="Meta de Vendas"
               type="text"

@@ -17,9 +17,11 @@ import { EmptyState } from './EmptyState';
 interface ConcursoListProps {
   onEdit: (concurso: Concurso) => void;
   onLaunchResult: (concurso: Concurso) => void;
+  initialData?: any[];
+  isLoading?: boolean;
 }
 
-export function ConcursoList({ onEdit, onLaunchResult }: ConcursoListProps) {
+export function ConcursoList({ onEdit, onLaunchResult, initialData, isLoading: propsLoading }: ConcursoListProps) {
   const queryClient = useQueryClient();
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -35,24 +37,40 @@ export function ConcursoList({ onEdit, onLaunchResult }: ConcursoListProps) {
     variant: 'primary'
   });
 
-  const { data: concursos, isLoading } = useQuery({
+  const { data: queryConcursos, isLoading: queryLoading } = useQuery({
     queryKey: ['concursos'],
-    queryFn: () => getConcursosAction()
+    queryFn: () => getConcursosAction(),
+    enabled: !initialData
   });
+
+  const concursos = initialData || queryConcursos;
+  const isLoading = propsLoading ?? queryLoading;
+
+  const [error, setError] = useState<string | null>(null);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteConcursoAction(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['concursos'] });
-      setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    onSuccess: (res) => {
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ['concursos'] });
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setError(null);
+      } else {
+        setError(res.error || "Erro ao excluir campanha.");
+      }
     }
   });
 
   const processMutation = useMutation({
     mutationFn: (id: string) => processResultAction(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['concursos'] });
-      setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    onSuccess: (res) => {
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ['concursos'] });
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setError(null);
+      } else {
+        setError(res.error || "Erro ao processar resultado.");
+      }
     }
   });
 
@@ -77,14 +95,21 @@ export function ConcursoList({ onEdit, onLaunchResult }: ConcursoListProps) {
 
   return (
     <>
+      {error && (
+        <Box padding={4} bg="glass" border="glass" className="mb-4 border-red-500/50 bg-red-500/10">
+          <Text variant="tiny" className="text-red-400 text-center font-medium">
+            {error}
+          </Text>
+        </Box>
+      )}
       <Box padding={0} bg="glass" border="glass" className="overflow-hidden w-full">
         <Stack gap={0}>
           {concursos.map((concurso) => {
-            const statusConfig = {
+            const statusConfig = ({
               open: { variant: 'success' as const, label: 'Vendas Abertas' },
               closed: { variant: 'warning' as const, label: 'Aguardando Sorteio' },
               finished: { variant: 'info' as const, label: 'Sorteio Realizado' }
-            }[concurso.status];
+            } as const)[concurso.status as 'open' | 'closed' | 'finished'] || { variant: 'muted' as const, label: 'Desconhecido' };
 
             return (
               <ListRow

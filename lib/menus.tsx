@@ -28,6 +28,7 @@ export const GERENTE_MENU: MenuItem[] = [
   { icon: <TrendingUp size={18} />, label: "Dashboard", href: "/gerente/dashboard" },
   { icon: <FileText size={18} />, label: "Relatórios", href: "/gerente/relatorios" },
   { icon: <Users size={18} />, label: "Vendedores", href: "/gerente/vendedores" },
+  { icon: <Hash size={18} />, label: "Campanhas", href: "/gerente/concursos" },
   { icon: <Ticket size={18} />, label: "Tickets Emitidos", href: "/gerente/tickets" },
   { icon: <User size={18} />, label: "Perfil", href: "/gerente/perfil" },
 ];

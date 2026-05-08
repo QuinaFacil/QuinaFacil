@@ -73,3 +73,31 @@ export async function getTicketsAction(search?: string) {
     return [];
   }
 }
+
+/**
+ * Exclui um ticket (Apenas Admin ou Gerente)
+ */
+export async function deleteTicketAction(ticketId: string) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autenticado");
+
+    const profile = await getCurrentUserProfileAction();
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'gerente')) {
+      throw new Error("Permissão negada");
+    }
+
+    const { error } = await supabase
+      .from('tickets')
+      .delete()
+      .eq('id', ticketId);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("[ERROR] deleteTicketAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Erro desconhecido" };
+  }
+}

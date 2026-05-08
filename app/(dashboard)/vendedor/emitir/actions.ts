@@ -152,10 +152,11 @@ export async function emitTicketAction(
     throw new Error("O bilhete deve conter exatamente 5 dezenas.");
   }
 
-  // 4. Gera o número serial (Identidade Premium)
+  // 4. Gera o número serial (Referente ao ID do Vendedor)
+  const sellerRef = user.id.slice(0, 4).toUpperCase();
   const timestamp = Date.now().toString().slice(-6);
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  const serial = `QF-${timestamp}-${random}`;
+  const serial = `QF-${sellerRef}-${timestamp}-${random}`;
 
   // 5. Insere o ticket
   const { data: ticket, error: ticketError } = await supabase

@@ -26,7 +26,7 @@ async function checkManager() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('name, role, city')
+    .select('name, role, city_id')
     .eq('id', user.id)
     .single();
 
@@ -48,7 +48,7 @@ export async function getSellersAction() {
     // 1. Busca apenas vendedores deste gerente
     const { data: profiles, error: profileError } = await adminSupabase
       .from('profiles')
-      .select('*')
+      .select('*, city:cities(name)')
       .eq('role', 'vendedor')
       .eq('manager_id', user.id)
       .order('name', { ascending: true });
@@ -63,10 +63,14 @@ export async function getSellersAction() {
     }
 
     // 3. Mescla os dados
-    const enrichedData = profiles.map(profile => ({
-      ...profile,
-      email: authUsers.find(u => u.id === profile.id)?.email
-    }));
+    const enrichedData = profiles.map(p => {
+      const profile = p as any;
+      return {
+        ...profile,
+        email: authUsers.find(u => u.id === profile.id)?.email,
+        city: profile.city?.name || 'Regional'
+      };
+    });
 
     return enrichedData;
   } catch (error: unknown) {
@@ -140,7 +144,7 @@ export async function createSellerAction(formData: SellerInput) {
         role: 'vendedor', // Forçado
         manager_id: user.id, // Forçado ao gerente logado
         phone: formData.phone || null,
-        city: profile.city, // Herda a cidade do gerente
+        city_id: profile.city_id, // Herda a cidade do gerente
         pix_key: formData.pix_key || null,
         cpf: formData.cpf || null,
         address: formData.address || null,

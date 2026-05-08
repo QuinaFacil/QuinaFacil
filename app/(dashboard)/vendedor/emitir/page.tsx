@@ -143,60 +143,24 @@ export default function EmitirBilhetePage() {
           )}
         </PageHeader>
 
-        {(goalStats || lastTicket) && (
+        {lastTicket && (
           <Box bg="glass" padding={6} rounded="md" border="glass" className="w-full">
             <Flex align="center" justify="between" gap={8} className="flex-wrap md:flex-nowrap">
-              {/* LADO ESQUERDO: ÚLTIMO BILHETE (Ordem Invertida) */}
-              {lastTicket ? (
-                <Stack gap={3}>
-                  <Text variant="tiny" weight="black" color="primary" transform="uppercase" italic opacity={0.6}>Último Bilhete Emitido</Text>
-                  <Flex gap={2}>
-                    {lastTicket.numbers.map((n, i) => (
-                      <Flex 
-                        key={i} 
-                        align="center"
-                        justify="center"
-                        className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-primary-light/30 bg-primary-light/5 shadow-[0_0_15px_rgba(56,189,248,0.1)]"
-                      >
-                        <Text weight="black" color="primary" size="lg">{n.toString().padStart(2, '0')}</Text>
-                      </Flex>
-                    ))}
-                  </Flex>
-                </Stack>
-              ) : (
-                <Box className="flex-1" />
-              )}
-
-              {/* LADO DIREITO: PROGRESSO DA META */}
-              {goalStats && (
-                <Stack gap={2} className="w-full md:max-w-md">
-                  <Flex justify="between" align="baseline" gap={4}>
-                    <Text variant="tiny" weight="black" color="primary" transform="uppercase" italic>Progresso da Meta</Text>
-                    <Text weight="black" size="xl" color="white" className="tabular-nums">
-                      {goalStats.percentage.toFixed(1)}%
-                    </Text>
-                  </Flex>
-                  
-                  <Box bg="none" rounded="full" className="h-2 w-full overflow-hidden border border-white/5 bg-white/5">
-                    <Box 
-                      className={`h-full transition-all duration-1000 ${goalStats.isPaid ? 'bg-brand-success' : 'bg-primary-light shadow-[0_0_10px_rgba(56,189,248,0.5)]'}`}
-                      style={{ width: `${Math.min(goalStats.percentage, 100)}%` }}
-                    />
-                  </Box>
-
-                  <Flex justify="between" align="center">
-                    <Text variant="tiny" weight="bold" transform="uppercase" opacity={0.4}>
-                      {goalStats.isPaid ? 'Meta Batida' : 'Faltam para Meta:'}
-                    </Text>
-                    <Text weight="black" size="sm" color={goalStats.isPaid ? 'success' : 'white'}>
-                      {goalStats.isPaid 
-                        ? `Lucro: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(goalStats.profit)}`
-                        : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.max(goalStats.target - goalStats.currentNet, 0))
-                      }
-                    </Text>
-                  </Flex>
-                </Stack>
-              )}
+              <Stack gap={3}>
+                <Text variant="tiny" weight="black" color="primary" transform="uppercase" italic opacity={0.6}>Último Bilhete Emitido</Text>
+                <Flex gap={2}>
+                  {lastTicket.numbers.map((n, i) => (
+                    <Flex 
+                      key={i} 
+                      align="center"
+                      justify="center"
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-primary-light/30 bg-primary-light/5 shadow-[0_0_15px_rgba(56,189,248,0.1)]"
+                    >
+                      <Text weight="black" color="primary" size="lg">{n.toString().padStart(2, '0')}</Text>
+                    </Flex>
+                  ))}
+                </Flex>
+              </Stack>
             </Flex>
           </Box>
         )}

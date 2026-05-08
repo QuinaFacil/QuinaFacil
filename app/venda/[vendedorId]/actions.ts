@@ -7,79 +7,117 @@ import { createAdminClient } from "@/utils/supabase/admin";
  * Busca o vendedor pelo ID para validar o link
  */
 export async function getSellerInfoAction(vendedorId: string) {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('name, city, city_id')
-    .eq('id', vendedorId)
-    .eq('role', 'vendedor')
-    .eq('active', true)
-    .single();
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        name, 
+        city_id,
+        city:cities (name)
+      `)
+      .eq('id', vendedorId)
+      .eq('active', true)
+      .maybeSingle();
 
-  if (error) return null;
-  return data;
+    if (error) {
+      console.error("[getSellerInfoAction] Error:", error.message);
+      return null;
+    }
+    
+    if (!data) {
+      console.warn("[getSellerInfoAction] No profile found for ID:", vendedorId);
+      return null;
+    }
+    
+    const profile = data as any;
+    return {
+      name: profile.name,
+      city: profile.city?.name || null
+    };
+  } catch (err) {
+    console.error("[getSellerInfoAction] Exception:", err);
+    return null;
+  }
 }
 
 /**
  * Busca o concurso ativo filtrado pela cidade do vendedor
  */
 export async function getActiveContestAction(vendedorId: string) {
-  const supabase = createAdminClient();
+  try {
+    const supabase = createAdminClient();
 
-  // 1. Busca a cidade do vendedor
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('city_id')
-    .eq('id', vendedorId)
-    .single();
+    // 1. Busca a cidade do vendedor
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('city_id')
+      .eq('id', vendedorId)
+      .maybeSingle();
 
-  if (!profile?.city_id) return null;
-
-  // 2. Busca concurso aberto para esta cidade e configurações de horário
-  const [{ data: contest }, { data: settings }] = await Promise.all([
-    supabase.from('concursos')
-      .select(`
-        id, 
-        concurso_numero, 
-        banner_url, 
-        description,
-        city:cities (name)
-      `)
-      .eq('status', 'open')
-      .eq('city_id', profile.city_id)
-      .order('draw_date', { ascending: true, nullsFirst: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase.from('system_settings').select('key, value').eq('key', 'sales_schedule').maybeSingle()
-  ]);
-
-  let schedule = { openTime: '06:00', closeTime: '17:00', activeDays: [1,2,3,4,5,6] };
-  if (settings && 'value' in settings && settings.value) {
-    try {
-      schedule = JSON.parse(settings.value as string);
-    } catch (e) {
-      console.error("Error parsing sales_schedule in public page:", e);
+    if (profileError) {
+      console.error("[getActiveContestAction] Profile query error:", profileError.message);
+      return null;
     }
+
+    // 2. Busca concurso aberto (prioriza cidade do vendedor, senão pega a última aberta)
+    let contestQuery = supabase.from('concursos')
+        .select(`
+          id, 
+          concurso_numero, 
+          banner_url, 
+          description,
+          city:cities (name)
+        `)
+        .eq('status', 'open');
+
+    if (profile?.city_id) {
+      contestQuery = contestQuery.eq('city_id', profile.city_id);
+    }
+
+    const [{ data: contest, error: contestError }, { data: settings }] = await Promise.all([
+      contestQuery
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase.from('system_settings').select('key, value').eq('key', 'sales_schedule').maybeSingle()
+    ]);
+
+    if (contestError) {
+      console.error("[getActiveContestAction] Contest query error:", contestError.message);
+    }
+
+    let schedule = { openTime: '06:00', closeTime: '17:00', activeDays: [1,2,3,4,5,6] };
+    if (settings && 'value' in settings && settings.value) {
+      try {
+        schedule = JSON.parse(settings.value as string);
+      } catch (e) {
+        console.error("Error parsing sales_schedule in public page:", e);
+      }
+    }
+
+    interface ContestWithCity {
+      id: string;
+      concurso_numero: number;
+      banner_url: string | null;
+      description: string | null;
+      city: { name: string } | null;
+    }
+
+    const contestData = contest as unknown as ContestWithCity | null;
+
+    return { 
+      id: contestData?.id,
+      concurso_numero: contestData?.concurso_numero,
+      banner_url: contestData?.banner_url || undefined,
+      description: contestData?.description || undefined,
+      cityName: contestData?.city?.name,
+      schedule 
+    };
+  } catch (err) {
+    console.error("[getActiveContestAction] Exception:", err);
+    return null;
   }
-
-  interface ContestWithCity {
-    id: string;
-    concurso_numero: number;
-    banner_url: string | null;
-    description: string | null;
-    city: { name: string } | null;
-  }
-
-  const contestData = contest as unknown as ContestWithCity | null;
-
-  return { 
-    id: contestData?.id,
-    concurso_numero: contestData?.concurso_numero,
-    banner_url: contestData?.banner_url || undefined,
-    description: contestData?.description || undefined,
-    cityName: contestData?.city?.name,
-    schedule 
-  };
 }
 
 /**
@@ -94,8 +132,11 @@ export async function submitClientTicketAction(
   try {
     const adminSupabase = createAdminClient();
 
-    // 1. Gera Serial Único
-    const serial = `LNK-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+    // 1. Gera Serial Único (Referente ao ID do Vendedor)
+    const sellerRef = vendedorId.slice(0, 4).toUpperCase();
+    const timestamp = Date.now().toString().slice(-4);
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const serial = `LNK-${sellerRef}-${timestamp}-${random}`;
 
     // 2. Insere o ticket como 'placeholder' e 'is_validated = false'
     const { data: ticket, error } = await adminSupabase

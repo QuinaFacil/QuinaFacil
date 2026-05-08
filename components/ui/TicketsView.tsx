@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Section } from '@/components/ui/Section';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ListRow } from '@/components/ui/ListRow';
@@ -23,7 +23,9 @@ import {
   Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { getTicketsAction } from '@/app/(dashboard)/actions';
+import { getTicketsAction, deleteTicketAction, getCurrentUserProfileAction } from '@/app/(dashboard)/actions';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { Trash2 } from 'lucide-react';
 
 
 interface TicketData {
@@ -38,13 +40,33 @@ interface TicketData {
 }
 
 export function TicketsView() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    ticketId: string;
+  }>({ isOpen: false, ticketId: '' });
 
   const { data: tickets, isLoading } = useQuery({
     queryKey: ['tickets-list', search],
     queryFn: () => getTicketsAction(search),
     refetchInterval: 10000,
   });
+
+  const { data: profile } = useQuery({
+    queryKey: ['current-user-profile'],
+    queryFn: () => getCurrentUserProfileAction()
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteTicketAction(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets-list'] });
+      setConfirmModal({ isOpen: false, ticketId: '' });
+    }
+  });
+
+  const canDelete = profile?.role === 'admin' || profile?.role === 'gerente';
 
   return (
     <>
@@ -132,6 +154,18 @@ export function TicketsView() {
                     >
                       Ver Detalhes
                     </Button>
+                    {canDelete && (
+                      <Button
+                        variant="glass"
+                        size="icon-sm"
+                        icon={Trash2}
+                        className="text-error border-error/10 hover:bg-error/10"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setConfirmModal({ isOpen: true, ticketId: ticket.id });
+                        }}
+                      />
+                    )}
                   </Flex>
                 </ListRow>
               ))
@@ -145,6 +179,16 @@ export function TicketsView() {
           </Stack>
         </Box>
       </Section>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Excluir Bilhete"
+        message="Tem certeza que deseja excluir este bilhete? Esta ação é irreversível."
+        variant="danger"
+        onClose={() => setConfirmModal({ isOpen: false, ticketId: '' })}
+        onConfirm={() => deleteMutation.mutate(confirmModal.ticketId)}
+        loading={deleteMutation.isPending}
+      />
     </>
   );
 }
