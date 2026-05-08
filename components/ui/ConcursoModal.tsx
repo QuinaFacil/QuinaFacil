@@ -74,6 +74,7 @@ function ConcursoForm({
   // Update city_id if manager and not set
   React.useEffect(() => {
     if (isManager && profile?.city_id && !formData.city_id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData(prev => ({ ...prev, city_id: profile.city_id }));
     }
   }, [isManager, profile, formData.city_id]);

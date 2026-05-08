@@ -30,7 +30,7 @@ export async function getSellerInfoAction(vendedorId: string) {
       return null;
     }
     
-    const profile = data as any;
+    const profile = data as unknown as { name: string; city: { name: string } | null };
     return {
       name: profile.name,
       city: profile.city?.name || null

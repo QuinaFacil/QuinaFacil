@@ -64,11 +64,11 @@ export async function getSellersAction() {
 
     // 3. Mescla os dados
     const enrichedData = profiles.map(p => {
-      const profile = p as any;
+      const profile = p as { id: string; name: string; city?: { name: string } | null };
       return {
         ...profile,
         email: authUsers.find(u => u.id === profile.id)?.email,
-        city: profile.city?.name || 'Regional'
+        city: (profile.city as any)?.name || 'Regional'
       };
     });
 

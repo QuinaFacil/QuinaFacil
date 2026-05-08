@@ -34,8 +34,8 @@ export async function getGerenteConcursosAction(): Promise<(Concurso & {
   if (error) throw new Error(error.message);
   
   return (data || []).map(c => {
-    const confirmedTickets = c.tickets?.filter((t: any) => t.status === 'confirmed') || [];
-    const sales_gross = confirmedTickets.reduce((acc: number, t: any) => acc + Number(t.amount), 0);
+    const confirmedTickets = (c.tickets as unknown as { amount: number; status: string }[])?.filter(t => t.status === 'confirmed') || [];
+    const sales_gross = confirmedTickets.reduce((acc, t) => acc + Number(t.amount), 0);
     const sales_net = sales_gross * 0.55; 
     const target = Number(c.ticket_goal) || 0;
     const goal_percentage = target > 0 ? (sales_net / target) * 100 : 0;
@@ -114,8 +114,8 @@ export async function saveGerenteConcursoAction(data: Partial<Concurso>) {
 
     revalidatePath('/gerente/concursos');
     return { success: true, data: result };
-  } catch (error: any) {
+  } catch (error) {
     console.error("[saveGerenteConcursoAction]:", error);
-    return { success: false, error: error.message || "Erro ao salvar concurso." };
+    return { success: false, error: error instanceof Error ? error.message : "Erro ao salvar concurso." };
   }
 }
